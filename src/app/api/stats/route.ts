@@ -1,0 +1,83 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthUser, unauthorized } from "@/lib/auth";
+
+export async function GET(req: Request) {
+  try {
+    const authUser = getAuthUser();
+    if (!authUser) {
+      return unauthorized();
+    }
+
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get("type") || "student";
+
+    if (type === "student") {
+      const totalVehicles = await prisma.vehicle.count();
+      const activeBookings = await prisma.vehicleRequest.count({
+        where: {
+          requester_id: authUser.id,
+          approval_status: "approved",
+          allocation_status: "allocated",
+        },
+      });
+      const unreadMessages = await prisma.message.count({
+        where: {
+          receiver_user_id: authUser.id,
+          is_read: false,
+        },
+      });
+
+      return NextResponse.json({
+        data: {
+          availableVehicles: totalVehicles,
+          activeBookings,
+          unreadMessages,
+        },
+      });
+    }
+
+    if (type === "admin") {
+      const pendingApprovals = await prisma.vehicleRequest.count({
+        where: { approval_status: "pending" },
+      });
+      const approvedToday = await prisma.vehicleRequest.count({
+        where: {
+          approval_status: "approved",
+          created_at: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+          },
+        },
+      });
+      const rejectedCount = await prisma.vehicleRequest.count({
+        where: { approval_status: "rejected" },
+      });
+      const totalUsers = await prisma.user.count();
+
+      return NextResponse.json({
+        data: {
+          pendingApprovals,
+          approvedToday,
+          rejectedCount,
+          totalUsers,
+        },
+      });
+    }
+
+    // Generic stats
+    const totalVehicles = await prisma.vehicle.count();
+    const pendingRequests = await prisma.vehicleRequest.count({
+      where: { approval_status: "pending" },
+    });
+
+    return NextResponse.json({
+      data: {
+        totalVehicles,
+        pendingRequests,
+      },
+    });
+  } catch (err) {
+    console.error("Stats error:", err);
+    return NextResponse.json({ status: 500, error: "Failed to fetch stats" }, { status: 500 });
+  }
+}

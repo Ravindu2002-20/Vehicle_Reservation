@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Faculty {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  departments Department[]
+  admins      Admin[]
+
+  @@map("faculty")
+}
+
+model Department {
+  id              Int         @id @default(autoincrement())
+  department_name String
+  faculty_id      Int
+
+  faculty         Faculty     @relation(fields: [faculty_id], references: [id])
+
+  users           User[]
+  admins          Admin[]
+
+  @@map("department")
+}
+
+model User {
+  id                            Int              @id @default(autoincrement())
+  full_name                     String
+  user_type                     String
+  registration_or_employee_no   String           @unique
+  designation                   String?
+  telephone                     String?
+  email                         String           @unique
+  password                      String
+  department_id                 Int
+
+  department                    Department       @relation(fields: [department_id], references: [id])
+
+  vehicle_requests              VehicleRequest[]
+
+  // Messages
+  sent_user_messages            Message[]        @relation("UserSender")
+  received_user_messages        Message[]        @relation("UserReceiver")
+
+  created_at                    DateTime         @default(now())
+
+  @@map("user")
+}
+
+model Admin {
+  id                            Int              @id @default(autoincrement())
+  full_name                     String
+  admin_role                    String
+  telephone                     String?
+  email                         String           @unique
+  password                      String
+
+  department_id                 Int?
+  department                    Department?      @relation(fields: [department_id], references: [id])
+
+  faculty_id                    Int?
+  faculty                       Faculty?         @relation(fields: [faculty_id], references: [id])
+
+  approved_requests             VehicleRequest[] @relation("RequestApprover")
+
+  // Messages
+  sent_admin_messages           Message[]        @relation("AdminSender")
+  received_admin_messages       Message[]        @relation("AdminReceiver")
+
+  created_at                    DateTime         @default(now())
+
+  @@map("admin")
+}
+
+model Driver {
+  id                            Int              @id @default(autoincrement())
+  full_name                     String
+  telephone                     String?
+  license_number                String           @unique
+  availability_status           String
+
+  vehicle_requests              VehicleRequest[]
+
+  created_at                    DateTime         @default(now())
+
+  @@map("driver")
+}
+
+model Vehicle {
+  id                            Int              @id @default(autoincrement())
+  vehicle_number                String           @unique
+  vehicle_type                  String
+  capacity                      Int
+  availability_status           String
+
+  vehicle_requests              VehicleRequest[]
+
+  @@map("vehicle")
+}
+
+model VehicleRequest {
+  id                            Int              @id @default(autoincrement())
+
+  requester_id                  Int
+  requester                     User             @relation(fields: [requester_id], references: [id])
+
+  approved_by                   Int?
+  approver                      Admin?           @relation("RequestApprover", fields: [approved_by], references: [id])
+
+  vehicle_id                    Int?
+  vehicle                       Vehicle?         @relation(fields: [vehicle_id], references: [id])
+
+  driver_id                     Int?
+  driver                        Driver?          @relation(fields: [driver_id], references: [id])
+
+  request_type                  String
+  vehicle_nature                String
+  number_of_persons             Int
+
+  travel_date_from              DateTime
+  travel_date_to                DateTime
+
+  required_time_from            String
+  required_time_to              String
+
+  purpose                       String
+  places_to_visit               String?
+  travel_route                  String?
+
+  distance_type                 String
+
+  special_notes                 String?
+
+  approval_status               String           @default("pending")
+  allocation_status             String           @default("pending")
+
+  admin_remarks                 String?
+  trip_remarks                  String?
+
+  created_at                    DateTime         @default(now())
+
+  @@map("vehicle_request")
+}
+
+model Message {
+  id                            Int       @id @default(autoincrement())
+
+  // User sender/receiver
+  sender_user_id                Int?
+  receiver_user_id              Int?
+
+  sender_user                   User?     @relation("UserSender", fields: [sender_user_id], references: [id])
+  receiver_user                 User?     @relation("UserReceiver", fields: [receiver_user_id], references: [id])
+
+  // Admin sender/receiver
+  sender_admin_id               Int?
+  receiver_admin_id             Int?
+
+  sender_admin                  Admin?    @relation("AdminSender", fields: [sender_admin_id], references: [id])
+  receiver_admin                Admin?    @relation("AdminReceiver", fields: [receiver_admin_id], references: [id])
+
+  subject                       String?
+  message                       String
+
+  is_read                       Boolean   @default(false)
+
+  created_at                    DateTime  @default(now())
+
+  @@map("message")
+}

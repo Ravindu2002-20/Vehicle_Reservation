@@ -1,0 +1,221 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Car,
+  Clock,
+  MapPin,
+  Users,
+  Loader2,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+
+import { Card, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
+
+import { getUserRequests } from "@/lib/api";
+
+interface VehicleRequest {
+  id: number;
+  request_type: string;
+  vehicle_nature: string;
+  number_of_persons: number;
+  travel_date_from: string;
+  travel_date_to: string;
+  purpose: string;
+  places_to_visit: string | null;
+  approval_status: string;
+  created_at: string;
+}
+
+export function PreviousRequestsPage() {
+  const router = useRouter();
+
+  const [requests, setRequests] = useState<VehicleRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  async function loadRequests() {
+    setLoading(true);
+    const data = await getUserRequests();
+    if (data?.data) setRequests(data.data);
+    setLoading(false);
+  }
+
+  async function handleDelete(id: number) {
+    const ok = window.confirm("Delete this request?");
+    if (!ok) return;
+
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+
+    if (expandedId === id) setExpandedId(null);
+  }
+
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
+  const getStatusBadge = (status: string) => {
+    const s = status.toLowerCase();
+
+    if (s === "approved")
+      return (
+        <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
+          Approved
+        </Badge>
+      );
+
+    if (s === "pending")
+      return (
+        <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
+          Pending
+        </Badge>
+      );
+
+    if (s === "rejected")
+      return (
+        <Badge className="bg-red-100 text-red-800 border border-red-200">
+          Rejected
+        </Badge>
+      );
+
+    return <Badge>{status}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          Request History
+        </h1>
+        <p className="text-sm text-gray-500">
+          View and manage your vehicle reservations
+        </p>
+      </div>
+
+      {requests.map((req) => {
+        const isOpen = expandedId === req.id;
+
+        return (
+          <Card
+            key={req.id}
+            className={`
+              border transition-all duration-200 cursor-pointer
+              hover:shadow-lg hover:-translate-y-[1px]
+              ${isOpen ? "border-blue-300 shadow-md" : "border-gray-200"}
+            `}
+          >
+            {/* HEADER */}
+            <div
+              className="p-4 flex justify-between items-center"
+              onClick={() =>
+                setExpandedId(isOpen ? null : req.id)
+              }
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-50">
+                  <Car className="w-5 h-5 text-blue-600" />
+                </div>
+
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {req.request_type} • {req.vehicle_nature}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Request #{req.id}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {getStatusBadge(req.approval_status)}
+                {isOpen ? (
+                  <ChevronUp className="text-gray-500" />
+                ) : (
+                  <ChevronDown className="text-gray-500" />
+                )}
+              </div>
+            </div>
+
+            {/* DETAILS */}
+            {isOpen && (
+              <CardContent className="border-t bg-gray-50/50 p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    <span>
+                      {req.places_to_visit || "Not specified"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Users className="w-4 h-4 text-gray-500" />
+                    <span>
+                      {req.number_of_persons} passengers
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-gray-700">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    <span>
+                      {formatDate(req.travel_date_from)} →{" "}
+                      {formatDate(req.travel_date_to)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <p className="text-xs uppercase text-gray-500">
+                    Purpose
+                  </p>
+                  <p className="text-gray-800 font-medium">
+                    {req.purpose}
+                  </p>
+                </div>
+
+                {/* DELETE ONLY ACTION */}
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(req.id);
+                    }}
+                    className="
+                      flex items-center gap-1
+                      text-sm text-red-500
+                      px-3 py-1 rounded-md
+                      hover:bg-red-50
+                      hover:text-red-600
+                      transition
+                    "
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
