@@ -157,8 +157,6 @@ function EditableField({
       return;
     }
 
-
-
     setIsSaving(true);
     setAuthError("");
 
@@ -173,9 +171,6 @@ function EditableField({
           password,
         }),
       });
-
-
-
 
       const payload = await res.json();
 
@@ -255,14 +250,17 @@ export function AccountDetailsPage() {
 
   const sessionUserId = user?.id;
 
-
   // Provide userId to EditableField (which PATCHes /api/profile).
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
     telephone: "",
+    registration_or_employee_no: "",
+    department: {
+      faculty: null as string | null,
+      name: null as string | null,
+    },
   });
-
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -291,10 +289,18 @@ export function AccountDetailsPage() {
 
         if (cancelled) return;
 
+        // API returns { data: { full_name, email, telephone, ... } }
+        const data = payload.data ?? payload;
+
         setProfileData({
-          name: payload.full_name ?? "",
-          email: payload.email ?? "",
-          telephone: payload.telephone ?? "",
+          name: data.full_name ?? data.name ?? "",
+          email: data.email ?? "",
+          telephone: data.telephone ?? "",
+          registration_or_employee_no: data.registration_or_employee_no ?? "",
+          department: {
+            faculty: data.department?.faculty ?? null,
+            name: data.department?.name ?? null,
+          },
         });
       } catch (e) {
         if (cancelled) return;
@@ -310,22 +316,25 @@ export function AccountDetailsPage() {
   }, [sessionUserId]);
 
   const departmentInfo = useMemo(() => {
-    // `useSession()` may be a stub; rely on session shape for department, but render safely.
+    // First try API returned department, then fall back to session data
     return {
-      faculty: (user as any)?.department?.faculty ?? null,
-      name: (user as any)?.department?.name ?? null,
+      faculty: profileData.department.faculty ?? (user as any)?.department?.faculty ?? null,
+      name: profileData.department.name ?? (user as any)?.department?.name ?? null,
     };
-  }, [user]);
-
+  }, [profileData, user]);
 
   // After a successful save, sync local state + update sessionStorage
   const handleSaved = (field: keyof typeof profileData) => (value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
     try {
-      const stored = getAuth();
+        const stored = getAuth();
       if (stored) {
         const fieldMap: Record<string, string> = { name: "full_name", email: "email", telephone: "telephone" };
         stored[fieldMap[field] ?? field] = value;
+        // Keep payload shape consistent with UI (uses user.full_name in other places)
+        if (field === "name") {
+          stored.full_name = value;
+        }
         sessionStorage.setItem("user", JSON.stringify(stored));
       }
     } catch {
@@ -372,7 +381,7 @@ export function AccountDetailsPage() {
               <div>
                 <CardTitle className="text-3xl mb-2">{profileData.name}</CardTitle>
                 <CardDescription className="text-orange-100 text-lg">
-                  {user.registration_or_employee_no ?? user.role}
+                  {profileData.registration_or_employee_no || user.registration_or_employee_no || user.user_type || ""}
                 </CardDescription>
               </div>
             </div>
@@ -411,7 +420,7 @@ export function AccountDetailsPage() {
             <Separator />
             <EditableField
               label="Role"
-              value={user.role}
+              value={user.role ?? (user.user_type as any) ?? "student"}
               icon={<IdCard className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly
@@ -435,6 +444,7 @@ export function AccountDetailsPage() {
               iconColor="text-orange-600"
               fieldKey="name"
               onSaved={handleSaved("name")}
+              userId={sessionUserId}
             />
             <Separator />
             <EditableField
@@ -444,6 +454,7 @@ export function AccountDetailsPage() {
               iconColor="text-orange-600"
               fieldKey="email"
               onSaved={handleSaved("email")}
+              userId={sessionUserId}
             />
             <Separator />
             <EditableField
@@ -453,11 +464,12 @@ export function AccountDetailsPage() {
               iconColor="text-orange-600"
               fieldKey="telephone"
               onSaved={handleSaved("telephone")}
+              userId={sessionUserId}
             />
             <Separator />
             <EditableField
               label="Registration / Employee No"
-              value={user.registration_or_employee_no ?? "Not applicable"}
+              value={profileData.registration_or_employee_no || user.registration_or_employee_no || "Not applicable"}
               icon={<IdCard className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly

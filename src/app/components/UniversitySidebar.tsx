@@ -2,6 +2,16 @@ import { FileText, MessageSquare, History, LayoutDashboard, Settings, FileCheck,
 import type { StudentPage } from "./UniversityDashboard";
 import type { UserRole } from "./UniversityDashboard";
 
+/** Human-readable labels for every UserRole value */
+const ROLE_LABELS: Record<UserRole, string> = {
+  "student": "Student",
+  "lecturer": "Lecturer",
+  "university-deputy": "University Deputy",
+  "admin-deputy": "Admin Deputy",
+  "dean": "Dean",
+  "senior-officer": "Senior Officer",
+};
+
 interface UniversitySidebarProps {
   role: UserRole;
   currentPage: StudentPage;
@@ -57,13 +67,8 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
       <div className="absolute bottom-4 left-4 right-4">
         <div className="bg-orange-900 bg-opacity-60 rounded-lg p-3 text-center">
           <p className="text-xs text-amber-200">Current Role</p>
-          <p className="text-sm font-semibold capitalize">
-            {role === "student" ? "User" :
-             role === "faculty-admin" ? "Faculty Admin" :
-             role === "university-deputy" ? "University Deputy" :
-             role === "faculty-deputy" ? "Faculty Deputy" :
-             role === "senior-officer" ? "Senior Officer" : "Dean"}
-
+          <p className="text-sm font-semibold">
+            {ROLE_LABELS[role] || role}
           </p>
         </div>
       </div>

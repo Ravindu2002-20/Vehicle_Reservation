@@ -10,6 +10,16 @@ import type { UserRole } from "./UniversityDashboard";
 import type { StudentPage } from "./UniversityDashboard";
 import { getAuth } from "@/lib/api";
 
+/** Human-readable labels for every UserRole value */
+const ROLE_LABELS: Record<UserRole, string> = {
+  "student": "Student",
+  "lecturer": "Lecturer",
+  "university-deputy": "University Deputy",
+  "admin-deputy": "Admin Deputy",
+  "dean": "Dean",
+  "senior-officer": "Senior Officer",
+};
+
 interface UniversityHeaderProps {
   role: UserRole;
   onPageChange: (page: StudentPage) => void;
@@ -48,8 +58,8 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
       .map((n) => n[0]?.toUpperCase())
       .join("");
 
-  const rolePossessionLabel =
-    role === "student" ? "Student" : role.replace("-", " ").replace(/(^\w|\s\w)/g, (m) => m.toUpperCase());
+  const rolePossessionLabel = ROLE_LABELS[role] || role;
+
 
   const userInitials = getInitials(userName);
 

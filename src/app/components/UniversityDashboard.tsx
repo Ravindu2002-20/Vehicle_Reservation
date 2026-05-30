@@ -3,16 +3,27 @@ import { motion, AnimatePresence } from "motion/react";
 import { UniversitySidebar } from "./UniversitySidebar";
 import { UniversityHeader } from "./UniversityHeader";
 import { StudentDashboard } from "./student/StudentDashboard";
-import { FacultyAdminDashboard } from "./roles/AdminDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
-import { FacultyDeputyDashboard } from "./roles/General DeputyDashboard";
+import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
+
 import { DeanDashboard } from "./roles/DeanDashboard";
 import { FleetStatusView } from "./roles/FleetStatusView";
 import { SeniorOfficerDashboard } from "./roles/SeniorOfficerDashboard";
 
-export type UserRole = "student" | "faculty-admin" | "university-deputy" | "faculty-deputy" | "dean" | "senior-officer";
+export type UserRole =
+  | "student"
+  | "lecturer"
+  | "university-deputy"
+  | "admin-deputy"
+  | "dean"
+  | "senior-officer";
+
+
+
+
 
 export type StudentPage = "reservation-form" | "messages" | "previous-requests" | "account-details" | "edit-profile" | "dashboard" | "approvals" | "users" | "analytics" | "settings" | "fleet-status";
+
 
 interface UniversityDashboardProps {
   role: UserRole;
@@ -27,14 +38,14 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
     if (currentPage === "fleet-status") {
       return <FleetStatusView />;
     }
-    // Default dashboard view for each role
-    if (role === "faculty-admin") return <FacultyAdminDashboard />;
+    // Default dashboard view for each admin role
     if (role === "university-deputy") return <UniversityDeputyDashboard />;
-    if (role === "faculty-deputy") return <FacultyDeputyDashboard />;
+    if (role === "admin-deputy") return <AdminDeputyDashboard />;
     if (role === "dean") return <DeanDashboard />;
     if (role === "senior-officer") return <SeniorOfficerDashboard />;
     return null;
   };
+
 
 
   return (
@@ -57,11 +68,12 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.3 }}
             >
-              {role === "student" ? (
+              {role === "student" || role === "lecturer" ? (
                 <StudentDashboard currentPage={currentPage} />
               ) : (
                 renderAdminContent()
               )}
+
             </motion.div>
           </AnimatePresence>
         </main>

@@ -36,13 +36,11 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       data: {
-        user: {
-          name: user.full_name,
-          email: user.email,
-          telephone: user.telephone,
-          role: user.user_type,
-          registration_or_employee_no: user.registration_or_employee_no,
-        },
+        full_name: user.full_name,
+        email: user.email,
+        telephone: user.telephone,
+        user_type: user.user_type,
+        registration_or_employee_no: user.registration_or_employee_no,
         department: {
           faculty: user.department?.faculty?.name ?? null,
           name: user.department?.department_name ?? null,
