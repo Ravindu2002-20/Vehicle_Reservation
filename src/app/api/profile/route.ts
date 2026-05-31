@@ -9,15 +9,21 @@ import bcrypt from "bcryptjs";
 
 export async function GET(req: Request) {
   try {
-    // Temporary placeholder for authenticated user id.
-    // Current frontend stores auth in sessionStorage; server can't access it,
-    // so we accept a header as a stand-in.
+    // Auth on the Next.js server is based on JWT cookie. Query params should not be trusted.
+    // However, to keep compatibility with the existing frontend, we accept either:
+    //   - x-user-id header (preferred by the current client), or
+    //   - user_id query param (legacy)
     const userIdHeader = req.headers.get("x-user-id");
-    const userId = userIdHeader ? Number(userIdHeader) : null;
+    const { searchParams } = new URL(req.url);
+    const userIdQuery = searchParams.get("user_id");
+
+    const userIdRaw = userIdHeader ?? userIdQuery;
+    const userId = userIdRaw ? Number(userIdRaw) : null;
 
     if (!userId || Number.isNaN(userId)) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
+
 
     const user = await prisma.user.findUnique({
       where: { id: userId },

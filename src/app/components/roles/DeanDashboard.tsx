@@ -2,7 +2,7 @@ import { Award, TrendingUp, Users, FileCheck, BarChart3, Calendar } from "lucide
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 
-export function DeanDashboard() {
+export function DeanDashboard({ currentPage }: { currentPage?: string }) {
   return (
     <div className="space-y-6">
       <div>
@@ -16,7 +16,7 @@ export function DeanDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Approvals</p>
+                <p className="text-sm text-gray-600 mb-1">Faculty Students</p>
                 <p className="text-3xl font-bold text-emerald-600">342</p>
               </div>
               <div className="bg-emerald-100 p-3 rounded-full">

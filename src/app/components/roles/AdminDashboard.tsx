@@ -24,7 +24,7 @@ interface PendingRequest {
   approval_status: string;
 }
 
-export function FacultyAdminDashboard() {
+export function FacultyAdminDashboard({ currentPage }: { currentPage?: string }) {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
