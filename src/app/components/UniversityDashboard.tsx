@@ -5,7 +5,6 @@ import { UniversityHeader } from "./UniversityHeader";
 import { StudentDashboard } from "./student/StudentDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
-
 import { DeanDashboard } from "./roles/DeanDashboard";
 import { FleetStatusView } from "./roles/FleetStatusView";
 import { SeniorOfficerDashboard } from "./roles/SeniorOfficerDashboard";

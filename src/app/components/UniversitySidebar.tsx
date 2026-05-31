@@ -26,14 +26,13 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "previous-requests" as StudentPage, label: "Previous Requests", icon: History },
   ];
 
-  // Other roles menu items (placeholders)
+  // Other roles menu items
   const adminMenuItems = [
     { id: "dashboard" as StudentPage, label: "Dashboard", icon: LayoutDashboard },
     { id: "approvals" as StudentPage, label: "Approvals", icon: FileCheck },
     { id: "fleet-status" as StudentPage, label: "Fleet Status", icon: Car },
-    { id: "analytics" as StudentPage, label: "Analytics", icon: BarChart3 },
-    { id: "settings" as StudentPage, label: "Settings", icon: Settings },
   ];
+
 
   const menuItems = role === "student" ? studentMenuItems : adminMenuItems;
 
@@ -57,7 +56,9 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
                 : "hover:bg-orange-500 hover:scale-103 hover:shadow-md hover:brightness-110"
             }`}
           >
-            <item.icon className={`w-5 h-5 transition-transform duration-300 ${currentPage !== item.id ? "group-hover:translate-x-1" : ""}`} />
+            <item.icon
+              className={`w-5 h-5 transition-transform duration-300 ${currentPage !== item.id ? "group-hover:translate-x-1" : ""}`}
+            />
             <span className="font-medium">{item.label}</span>
           </button>
         ))}
@@ -75,3 +76,4 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     </div>
   );
 }
+

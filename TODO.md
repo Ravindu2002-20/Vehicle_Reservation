@@ -1,12 +1,8 @@
-# TODO
+# TODO - General Deputy Dashboard fix
 
-## Requests production implementation
-- [x] Add backend API: `src/app/api/requests/[id]/route.ts` with `GET` + `DELETE`
-
-- [ ] Update frontend API layer: `src/lib/api.ts` with `getUserRequestById(id)` + `deleteUserRequest(id)` and robust error handling
-- [x] Add history page UI for `/requests`: `src/app/requests/page.tsx` + `src/app/requests/requestsHistory.tsx`
-- [x] Add detail page UI for `/requests/[id]`: `src/app/requests/[id]/page.tsx` + `src/app/requests/requestDetail.tsx`
-
-- [ ] Ensure loading/error/empty states + confirm dialog + optimistic delete with rollback + hover/accordion animations
-- [ ] Validate by running Next dev server and manually testing `/requests` and `/requests/[id]`
+- [x] Fix role wiring for `general-deputy` (ensure types + sidebar render correct label)
+- [ ] Make `GeneralDeputyDashboard` data-driven (replace hardcoded placeholder numbers with API calls)
+- [ ] Ensure approve/reject UI works for General Deputy: confirm backend permission checks and align frontend (only show buttons if allowed)
+- [ ] Smoke test by running Next dev and manually verifying the dashboard renders for `faculty-deputy`/`general-deputy`
+- [ ] Update any related components/constants so the dashboard appears in the correct place
 

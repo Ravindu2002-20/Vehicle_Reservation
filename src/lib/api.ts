@@ -30,7 +30,11 @@ export async function getUserProfile() {
   if (!user) return null;
 
   try {
-    const res = await fetch(`/api/profile?user_id=${user.id}`);
+    const res = await fetch(`/api/profile?user_id=${user.id}`, {
+      headers: {
+        "x-user-id": user.id.toString(),
+      },
+    });
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload?.data ?? null;
@@ -44,7 +48,11 @@ export async function getUserRequests() {
   if (!user) return { data: [] as any[] };
 
   try {
-    const res = await fetch(`/api/vehicle-requests?user_id=${user.id}`);
+    const res = await fetch(`/api/vehicle-requests?user_id=${user.id}`, {
+      headers: {
+        "x-user-id": user.id.toString(),
+      },
+    });
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload;
@@ -83,7 +91,11 @@ export async function getMessages() {
   if (!user) return [];
 
   try {
-    const res = await fetch(`/api/messages/inbox?user_id=${user.id}`);
+    const res = await fetch(`/api/messages/inbox?user_id=${user.id}`, {
+      headers: {
+        "x-user-id": user.id.toString(),
+      },
+    });
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload;

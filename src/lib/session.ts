@@ -27,7 +27,6 @@ export interface SessionUser {
   telephone?: string | null;
 }
 
-
 export interface SessionAdmin {
   id: number;
   email: string;
@@ -39,48 +38,54 @@ export interface SessionAdmin {
 
 export type Session = SessionUser | SessionAdmin | null;
 
-// Minimal client-side hook used by UI components.
-// Reads from sessionStorage where auth stores the user data.
-export function useSession(): { user: SessionUser } {
-  let stored: any = null;
-  if (typeof window !== "undefined") {
-    try {
-      stored = JSON.parse(sessionStorage.getItem("user") || "null");
-    } catch {
-      // ignore
-    }
+import { createClient } from "@supabase/supabase-js";
+
+// Client-side hook used by UI components.
+// Option A: return the currently authenticated Supabase user.
+export function useSession(): { user: SessionUser | null } {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) return { user: null };
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
+
+  // getSession is typically sync for the current in-memory session, but keep this defensive.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const maybePromise = (supabase.auth as any).getSession
+    ? (supabase.auth as any).getSession()
+    : null;
+
+  if (maybePromise && typeof maybePromise.then === "function") {
+    // If it's async in this environment, we can't await in a hook sync return.
+    return { user: null };
   }
 
-  const defaultUser: SessionUser = {
-    id: 0,
-    email: "",
-    full_name: "",
-    user_type: "",
-    role: "student",
-    department_id: 0,
-    registration_or_employee_no: "",
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const session = (maybePromise as any)?.data?.session ?? maybePromise?.session ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = (session?.user ?? null) as any;
 
-  if (!stored) {
-    return { user: defaultUser };
-  }
+  if (!user) return { user: null };
+
+  const id = Number(user.id ?? user.user_metadata?.id ?? user.user_metadata?.sub ?? 0);
 
   return {
     user: {
-      id: stored.id ?? stored.user_id ?? 0,
-      email: stored.email ?? "",
-      full_name: stored.full_name ?? "",
-      user_type: stored.user_type ?? "",
-      role: stored.role ?? "student",
-      department_id: stored.department_id ?? 0,
-      registration_or_employee_no: stored.registration_or_employee_no ?? "",
-      telephone: stored.telephone ?? null,
-      department: stored.department
-        ? {
-            faculty: stored.department.faculty ?? null,
-            name: stored.department.name ?? null,
-          }
-        : null,
+      id,
+      email: user.email ?? "",
+      full_name: user.user_metadata?.full_name ?? "",
+      user_type: user.user_metadata?.user_type ?? "",
+      role: (user.user_metadata?.role ?? "student") as UserRole,
+      department_id: Number(user.user_metadata?.department_id ?? 0),
+      registration_or_employee_no:
+        user.user_metadata?.registration_or_employee_no ?? "",
+      department: null,
     },
   };
 }

@@ -2,7 +2,13 @@ import { Building2, Users, FileCheck, Calendar, Activity, Clock } from "lucide-r
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 
-export function FacultyDeputyDashboard() {
+import { FacultyDeputyApprovalsView } from "./FacultyDeputyApprovalsView";
+
+export function FacultyDeputyDashboard({ currentPage }: { currentPage?: string }) {
+  if (currentPage === "approvals") {
+    return <FacultyDeputyApprovalsView />;
+  }
+
   return (
     <div className="space-y-6">
       <div>

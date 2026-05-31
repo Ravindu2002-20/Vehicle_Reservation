@@ -37,7 +37,7 @@ const mockDrivers: Driver[] = [
   { id: "D005", name: "Thomas Martinez", licenseNumber: "DL-567890", telephone: "+1-555-0105", availabilityStatus: "available" },
 ];
 
-export function FleetStatusView() {
+export function FleetStatusView({ currentPage }: { currentPage?: string }) {
   const getVehicleStatusBadge = (status: Vehicle["status"]) => {
     switch (status) {
       case "available":
