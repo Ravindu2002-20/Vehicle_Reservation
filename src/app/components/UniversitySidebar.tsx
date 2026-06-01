@@ -1,6 +1,6 @@
 import { FileText, MessageSquare, History, LayoutDashboard, Settings, FileCheck, Users, BarChart3, Car } from "lucide-react";
-import type { StudentPage } from "./UniversityDashboard";
-import type { UserRole } from "./UniversityDashboard";
+import type { AdminPage, StudentPage, UserRole } from "./UniversityDashboard";
+
 
 /** Human-readable labels for every UserRole value */
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -12,6 +12,8 @@ const ROLE_LABELS: Record<UserRole, string> = {
   "senior-officer": "Senior Officer",
 };
 
+type UniversitySidebarPage = StudentPage | AdminPage;
+
 interface UniversitySidebarProps {
   role: UserRole;
   currentPage: StudentPage;
@@ -20,18 +22,19 @@ interface UniversitySidebarProps {
 
 export function UniversitySidebar({ role, currentPage, onPageChange }: UniversitySidebarProps) {
   // Student menu items
-  const studentMenuItems = [
+  const studentMenuItems: Array<{ id: StudentPage; label: string; icon: any }> = [
     { id: "reservation-form" as StudentPage, label: "Vehicle Reservation", icon: FileText },
     { id: "messages" as StudentPage, label: "Messages", icon: MessageSquare },
     { id: "previous-requests" as StudentPage, label: "Previous Requests", icon: History },
   ];
 
-  // Other roles menu items
-  const adminMenuItems = [
-    { id: "dashboard" as StudentPage, label: "Dashboard", icon: LayoutDashboard },
-    { id: "approvals" as StudentPage, label: "Approvals", icon: FileCheck },
-    { id: "fleet-status" as StudentPage, label: "Fleet Status", icon: Car },
+  // Admin menu items (use AdminPage ids but cast to StudentPage since UniversityDashboard stores a StudentPage state)
+  const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
+    { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
+    { id: "approvals" as AdminPage, label: "Approvals", icon: FileCheck },
+    { id: "fleet-status" as AdminPage, label: "Fleet Status", icon: Car },
   ];
+
 
 
   const menuItems = role === "student" ? studentMenuItems : adminMenuItems;

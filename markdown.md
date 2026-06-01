@@ -1,19 +1,41 @@
-# Vehicle_Reservation — Code Bundle (for GPT Review)
+# Vehicle Reservation — Project Notes (Code Bundle)
 
-This Markdown file includes the source code (code blocks) for the **critical set** selected for review:
+This Markdown file documents the current codebase by embedding the most relevant source code sections and summarizing the app architecture.
 
-- `src/app/api/**`
-- `src/app/components/roles/**`
-- `src/app/dashboard/**`
-- `src/app/requests/**`
-- `src/lib/**`
-- `prisma/schema.prisma`
+## What’s inside
+- Prisma schema (data model)
+- Auth/session integration (Supabase + role resolution)
+- Key Next.js API routes
+- Role-based dashboard routing
+- Core session/client utilities
 
 > Note: If you are pasting/uploading to a model with size limits, use chunking. This file may be large.
 
 ---
 
+## Folder structure (current)
+- `prisma/` (schema + migrations)
+- `src/` (Next.js app)
+  - `src/app/` (routes, pages, API endpoints)
+    - `src/app/api/` (Next API routes)
+      - `auth/` (login, logout, me)
+      - `profile/`
+      - `messages/` (inbox, send)
+      - `vehicle-requests/` (create/approve/reject/allocate)
+      - `vehicles/`
+      - `stats/`
+      - `requests/` (history / detail)
+    - `src/app/components/` (UI)
+      - `roles/` (admin/faculty-deputy dashboards)
+      - `student/` (student screens)
+      - `ui/` (shadcn-style UI primitives)
+    - `src/app/dashboard/page.tsx` (role redirect + dashboard render)
+  - `src/lib/` (Prisma, auth helpers, session hook)
+
+---
+
 ## `prisma/schema.prisma`
+
 
 ```prisma
 generator client {

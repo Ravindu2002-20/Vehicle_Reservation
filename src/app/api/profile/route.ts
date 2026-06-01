@@ -36,21 +36,48 @@ export async function GET(req: Request) {
       },
     });
 
-    if (!user) {
+    // Unified payload (used by both user and admin profile pages)
+    // Shape: { id, full_name, email, telephone, role }
+    if (user) {
+      return NextResponse.json({
+        data: {
+          id: user.id,
+          full_name: user.full_name,
+          email: user.email,
+          telephone: user.telephone,
+          role: user.user_type,
+          // keep existing fields for current UI compatibility
+          user_type: user.user_type,
+          registration_or_employee_no: user.registration_or_employee_no,
+          department: {
+            faculty: user.department?.faculty?.name ?? null,
+            name: user.department?.department_name ?? null,
+          },
+        },
+      });
+    }
+
+    // Fallback: if no user row exists, check if this is an admin account.
+    // NOTE: sessionStorage is not accessible from Next.js route handlers.
+    // We therefore fall back to a safe behavior:
+    //   - try admin lookup unconditionally
+    //   - if admin exists, return unified admin details
+    //   - otherwise, 404
+    const admin = await prisma.admin.findUnique({ where: { id: userId } });
+
+    if (!admin) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     return NextResponse.json({
       data: {
-        full_name: user.full_name,
-        email: user.email,
-        telephone: user.telephone,
-        user_type: user.user_type,
-        registration_or_employee_no: user.registration_or_employee_no,
-        department: {
-          faculty: user.department?.faculty?.name ?? null,
-          name: user.department?.department_name ?? null,
-        },
+        id: admin.id,
+        full_name: admin.full_name,
+        email: admin.email,
+        telephone: (admin as any).telephone ?? null,
+        role: admin.admin_role,
+        // keep existing fields for current UI compatibility
+        admin_role: admin.admin_role,
       },
     });
   } catch (error) {

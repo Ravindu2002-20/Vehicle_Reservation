@@ -7,7 +7,9 @@
  * Admin table `admin_role` values:
  *   "university-deputy", "admin-deputy", "dean", "senior-officer"
  */
-export type UserRole = 'student' | 'lecturer' | 'university-deputy' | 'admin-deputy' | 'dean' | 'senior-officer';
+import { createClient } from "@supabase/supabase-js";
+
+export type UserRole = 'user' | 'university-deputy' | 'dean' | 'general-deputy' | 'senior-officer';
 
 export interface SessionUser {
   id: number;
@@ -37,8 +39,6 @@ export interface SessionAdmin {
 }
 
 export type Session = SessionUser | SessionAdmin | null;
-
-import { createClient } from "@supabase/supabase-js";
 
 // Client-side hook used by UI components.
 // Option A: return the currently authenticated Supabase user.
@@ -81,7 +81,7 @@ export function useSession(): { user: SessionUser | null } {
       email: user.email ?? "",
       full_name: user.user_metadata?.full_name ?? "",
       user_type: user.user_metadata?.user_type ?? "",
-      role: (user.user_metadata?.role ?? "student") as UserRole,
+      role: (user.user_metadata?.role ?? "user") as UserRole,
       department_id: Number(user.user_metadata?.department_id ?? 0),
       registration_or_employee_no:
         user.user_metadata?.registration_or_employee_no ?? "",

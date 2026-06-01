@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { UniversitySidebar } from "./UniversitySidebar";
 import { UniversityHeader } from "./UniversityHeader";
-import { StudentDashboard } from "./student/StudentDashboard";
+import { StudentDashboard } from "./user/StudentDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
 import { DeanDashboard } from "./roles/DeanDashboard";
@@ -17,26 +17,51 @@ export type UserRole =
   | "dean"
   | "senior-officer";
 
+export type StudentPage =
+  | "reservation-form"
+  | "messages"
+  | "previous-requests"
+  | "account-details"
+  | "edit-profile"
+  | "dashboard"
+  | "approvals"
+  | "users"
+  | "analytics"
+  | "settings"
+  | "fleet-status";
 
+export type AdminPage = "dashboard" | "approvals" | "fleet-status";
 
-
-
-export type StudentPage = "reservation-form" | "messages" | "previous-requests" | "account-details" | "edit-profile" | "dashboard" | "approvals" | "users" | "analytics" | "settings" | "fleet-status";
-
+export function isAdminRole(role: UserRole): boolean {
+  return (
+    role === "university-deputy" ||
+    role === "admin-deputy" ||
+    role === "dean" ||
+    role === "senior-officer"
+  );
+}
 
 interface UniversityDashboardProps {
   role: UserRole;
 }
+
 
 export function UniversityDashboard({ role }: UniversityDashboardProps) {
   const [currentPage, setCurrentPage] = useState<StudentPage>(
     role === "student" ? "reservation-form" : "dashboard"
   );
 
+  // single navigation state: for admin roles we interpret it as AdminPage
+  const effectiveAdminPage: AdminPage = (
+    role && isAdminRole(role) ? (currentPage as unknown as AdminPage) : "dashboard"
+  );
+
+
   const renderAdminContent = () => {
-    if (currentPage === "fleet-status") {
+    if (effectiveAdminPage === "fleet-status") {
       return <FleetStatusView />;
     }
+
     // Default dashboard view for each admin role
     if (role === "university-deputy") return <UniversityDeputyDashboard />;
     if (role === "admin-deputy") return <AdminDeputyDashboard />;
@@ -44,6 +69,7 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
     if (role === "senior-officer") return <SeniorOfficerDashboard />;
     return null;
   };
+
 
 
 

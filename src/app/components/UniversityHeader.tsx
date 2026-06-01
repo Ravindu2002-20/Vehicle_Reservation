@@ -25,6 +25,7 @@ interface UniversityHeaderProps {
   onPageChange: (page: StudentPage) => void;
 }
 
+
 export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) {
   const router = useRouter();
   const [notificationCount, setNotificationCount] = useState(0);
@@ -63,7 +64,19 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
 
   const userInitials = getInitials(userName);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      // Supabase logout is client-side.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (supabaseUrl && supabaseAnonKey) {
+        const mod = await import("@supabase/supabase-js");
+        const supabase = mod.createClient(supabaseUrl, supabaseAnonKey);
+        await supabase.auth.signOut();
+      }
+    } catch {
+      // ignore
+    }
     sessionStorage.removeItem("user");
     fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/");

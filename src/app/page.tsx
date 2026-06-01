@@ -16,7 +16,7 @@ export default function Home() {
     } else {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   if (loading) {
     return (

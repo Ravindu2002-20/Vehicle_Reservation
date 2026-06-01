@@ -30,9 +30,9 @@ export async function getUserProfile() {
   if (!user) return null;
 
   try {
-    const res = await fetch(`/api/profile?user_id=${user.id}`, {
+    const res = await fetch(`/api/profile`, {
       headers: {
-        "x-user-id": user.id.toString(),
+        "x-user-id": String(user.id),
       },
     });
     const payload = await parseJsonSafe(res);

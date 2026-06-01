@@ -265,6 +265,8 @@ export function AccountDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  const [redirected, setRedirected] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -272,7 +274,9 @@ export function AccountDetailsPage() {
       setLoadError(null);
       try {
         if (!sessionUserId) {
-          throw new Error("Not signed in.");
+          setRedirected(true);
+          window.location.href = "/login";
+          return;
         }
 
         // GET /api/profile expects auth user id (server will read x-user-id header for now).
@@ -306,14 +310,14 @@ export function AccountDetailsPage() {
         if (cancelled) return;
         setLoadError(e instanceof Error ? e.message : "Failed to load profile");
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && !redirected) setLoading(false);
       }
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [sessionUserId]);
+  }, [sessionUserId, redirected]);
 
   const departmentInfo = useMemo(() => {
     // First try API returned department, then fall back to session data
