@@ -1,18 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/current-user";
 
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const authUser = getAuthUser();
+    const authUser = await getCurrentUser();
     if (!authUser) {
-      return unauthorized();
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
+    if (authUser.type !== "admin") {
+      return NextResponse.json({ status: 403, error: "Only admins can reject requests" }, { status: 403 });
     }
 
     const requestId = parseInt(params.id);
+    if (!Number.isFinite(requestId)) {
+      return NextResponse.json({ status: 400, error: "Invalid request id" }, { status: 400 });
+    }
 
     const updated = await prisma.vehicleRequest.update({
       where: { id: requestId },
@@ -27,3 +33,4 @@ export async function POST(
     return NextResponse.json({ status: 500, error: "Failed to reject request" }, { status: 500 });
   }
 }
+

@@ -1,15 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { User, Mail, Phone, Building2, IdCard, BookOpen, Pencil, Check, X, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import {
+  User,
+  Mail,
+  Phone,
+  Building2,
+  IdCard,
+  BookOpen,
+  Pencil,
+  Check,
+  X,
+  Lock,
+  AlertCircle,
+} from "lucide-react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { toast } from "sonner";
 import { useSession } from "../../../lib/session";
-import { getAuth } from "@/lib/api";
 
 function initials(name: string) {
   return name
@@ -19,71 +36,38 @@ function initials(name: string) {
     .join("");
 }
 
-// ─── Auth modal ───────────────────────────────────────────────────────────────
 function AuthDialog({
   onConfirm,
   onCancel,
   isSaving,
   error,
 }: {
-  onConfirm: (password: string) => void;
+  onConfirm: () => void;
   onCancel: () => void;
   isSaving: boolean;
   error: string;
 }) {
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [localError, setLocalError] = useState("");
-
-  const handleConfirm = () => {
-    if (!password.trim()) {
-      setLocalError("Password is required to save changes.");
-      return;
-    }
-    setLocalError("");
-    onConfirm(password);
-  };
-
-  const displayError = localError || error;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
         <div className="bg-gradient-to-r from-orange-600 to-orange-700 px-6 py-4">
           <div className="flex items-center gap-2 text-white">
             <Lock className="w-5 h-5" />
-            <h2 className="font-semibold text-lg">Confirm Your Identity</h2>
+            <h2 className="font-semibold text-lg">Confirm</h2>
           </div>
           <p className="text-orange-100 text-sm mt-1">
-            Enter your password to save profile changes
+            Supabase session will be used to save changes.
           </p>
         </div>
+
         <div className="p-6 space-y-4">
-          <div className="relative">
-            <Input
-              type={showPassword ? "text" : "password"}
-              placeholder="Your password"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setLocalError(""); }}
-              onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
-              className="pr-10"
-              autoFocus
-              disabled={isSaving}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          {displayError && (
+          {error && (
             <div className="flex items-center gap-2 text-red-600 text-sm">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {displayError}
+              {error}
             </div>
           )}
+
           <div className="flex gap-3 justify-end pt-2">
             <button
               onClick={onCancel}
@@ -93,7 +77,7 @@ function AuthDialog({
               Cancel
             </button>
             <button
-              onClick={handleConfirm}
+              onClick={onConfirm}
               disabled={isSaving}
               className="px-4 py-2 text-sm rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors font-medium disabled:opacity-50"
             >
@@ -106,7 +90,6 @@ function AuthDialog({
   );
 }
 
-// ─── Inline-editable field ────────────────────────────────────────────────────
 function EditableField({
   label,
   value,
@@ -126,13 +109,15 @@ function EditableField({
   readOnly?: boolean;
   userId?: number | null;
 }) {
-
-
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [pendingSave, setPendingSave] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [authError, setAuthError] = useState("");
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
 
   const startEdit = () => {
     setDraft(value);
@@ -145,13 +130,15 @@ function EditableField({
   };
 
   const requestSave = () => {
-    if (draft.trim() === value) { cancel(); return; }
+    if (draft.trim() === value) {
+      cancel();
+      return;
+    }
     setAuthError("");
     setPendingSave(true);
   };
 
-  const confirmSave = async (password: string) => {
-    // `userId` is passed from the parent page.
+  const confirmSave = async () => {
     if (userId == null) {
       setAuthError("Session expired. Please sign in again.");
       return;
@@ -168,14 +155,13 @@ function EditableField({
           userId,
           field: fieldKey,
           value: draft.trim(),
-          password,
         }),
       });
 
-      const payload = await res.json();
+      const payload = await res.json().catch(() => null);
 
       if (!res.ok) {
-        setAuthError(payload.error ?? "Failed to save changes.");
+        setAuthError(payload?.error ?? "Failed to save changes.");
         setIsSaving(false);
         return;
       }
@@ -196,11 +182,15 @@ function EditableField({
       {pendingSave && (
         <AuthDialog
           onConfirm={confirmSave}
-          onCancel={() => { setPendingSave(false); setAuthError(""); }}
+          onCancel={() => {
+            setPendingSave(false);
+            setAuthError("");
+          }}
           isSaving={isSaving}
           error={authError}
         />
       )}
+
       <div className="flex items-start gap-3 group">
         <span className={`${iconColor} mt-1 flex-shrink-0`}>{icon}</span>
         <div className="flex-1 min-w-0">
@@ -217,16 +207,26 @@ function EditableField({
                 className="h-8 text-sm"
                 autoFocus
               />
-              <button onClick={requestSave} className="text-green-600 hover:text-green-700 flex-shrink-0" title="Save">
+              <button
+                onClick={requestSave}
+                className="text-green-600 hover:text-green-700 flex-shrink-0"
+                title="Save"
+              >
                 <Check className="w-4 h-4" />
               </button>
-              <button onClick={cancel} className="text-gray-400 hover:text-gray-600 flex-shrink-0" title="Cancel">
+              <button
+                onClick={cancel}
+                className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                title="Cancel"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <p className="font-semibold text-gray-800 break-all">{value || "Not provided"}</p>
+              <p className="font-semibold text-gray-800 break-all">
+                {value || "Not provided"}
+              </p>
               {!readOnly && (
                 <button
                   onClick={startEdit}
@@ -244,13 +244,10 @@ function EditableField({
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export function AccountDetailsPage() {
   const { user } = useSession();
-
   const sessionUserId = user?.id;
 
-  // Provide userId to EditableField (which PATCHes /api/profile).
   const [profileData, setProfileData] = useState({
     name: "",
     email: "",
@@ -264,14 +261,15 @@ export function AccountDetailsPage() {
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
   const [redirected, setRedirected] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       setLoading(true);
       setLoadError(null);
+
       try {
         if (!sessionUserId) {
           setRedirected(true);
@@ -279,22 +277,21 @@ export function AccountDetailsPage() {
           return;
         }
 
-        // GET /api/profile expects auth user id (server will read x-user-id header for now).
         const res = await fetch(`/api/profile`, {
           headers: {
             "x-user-id": String(sessionUserId),
           },
         });
 
-        const payload = await res.json();
+        const payload = await res.json().catch(() => null);
+
         if (!res.ok) {
           throw new Error(payload?.error ?? "Failed to load profile");
         }
 
         if (cancelled) return;
 
-        // API returns { data: { full_name, email, telephone, ... } }
-        const data = payload.data ?? payload;
+        const data = payload?.data ?? payload;
 
         setProfileData({
           name: data.full_name ?? data.name ?? "",
@@ -313,6 +310,7 @@ export function AccountDetailsPage() {
         if (!cancelled && !redirected) setLoading(false);
       }
     }
+
     load();
     return () => {
       cancelled = true;
@@ -320,30 +318,14 @@ export function AccountDetailsPage() {
   }, [sessionUserId, redirected]);
 
   const departmentInfo = useMemo(() => {
-    // First try API returned department, then fall back to session data
     return {
       faculty: profileData.department.faculty ?? (user as any)?.department?.faculty ?? null,
       name: profileData.department.name ?? (user as any)?.department?.name ?? null,
     };
   }, [profileData, user]);
 
-  // After a successful save, sync local state + update sessionStorage
   const handleSaved = (field: keyof typeof profileData) => (value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
-    try {
-        const stored = getAuth();
-      if (stored) {
-        const fieldMap: Record<string, string> = { name: "full_name", email: "email", telephone: "telephone" };
-        stored[fieldMap[field] ?? field] = value;
-        // Keep payload shape consistent with UI (uses user.full_name in other places)
-        if (field === "name") {
-          stored.full_name = value;
-        }
-        sessionStorage.setItem("user", JSON.stringify(stored));
-      }
-    } catch {
-      // ignore
-    }
   };
 
   return (
@@ -382,10 +364,11 @@ export function AccountDetailsPage() {
                   {initials(profileData.name)}
                 </AvatarFallback>
               </Avatar>
+
               <div>
                 <CardTitle className="text-3xl mb-2">{profileData.name}</CardTitle>
                 <CardDescription className="text-orange-100 text-lg">
-                  {profileData.registration_or_employee_no || user.registration_or_employee_no || user.user_type || ""}
+                  {profileData.registration_or_employee_no || (user as any)?.registration_or_employee_no || (user as any)?.user_type || ""}
                 </CardDescription>
               </div>
             </div>
@@ -393,9 +376,7 @@ export function AccountDetailsPage() {
         </Card>
       )}
 
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Department — read-only */}
         <Card className="shadow-lg border-0">
           <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-t-2 border-t-orange-500 rounded-t-xl">
             <CardTitle className="flex items-center gap-2 text-orange-900">
@@ -407,7 +388,6 @@ export function AccountDetailsPage() {
             <EditableField
               label="Faculty"
               value={departmentInfo.faculty ?? "Not assigned"}
-
               icon={<Building2 className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly
@@ -416,7 +396,6 @@ export function AccountDetailsPage() {
             <EditableField
               label="Department"
               value={departmentInfo.name ?? "Not assigned"}
-
               icon={<BookOpen className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly
@@ -424,7 +403,7 @@ export function AccountDetailsPage() {
             <Separator />
             <EditableField
               label="Role"
-              value={user.role ?? (user.user_type as any) ?? "student"}
+              value={user.role ?? (user as any)?.user_type ?? "student"}
               icon={<IdCard className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly
@@ -432,7 +411,6 @@ export function AccountDetailsPage() {
           </CardContent>
         </Card>
 
-        {/* Contact — editable */}
         <Card className="shadow-lg border-0">
           <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-t-2 border-t-orange-500 rounded-t-xl">
             <CardTitle className="flex items-center gap-2 text-orange-900">
@@ -473,7 +451,7 @@ export function AccountDetailsPage() {
             <Separator />
             <EditableField
               label="Registration / Employee No"
-              value={profileData.registration_or_employee_no || user.registration_or_employee_no || "Not applicable"}
+              value={profileData.registration_or_employee_no || "Not applicable"}
               icon={<IdCard className="w-5 h-5" />}
               iconColor="text-orange-600"
               readOnly
@@ -484,3 +462,4 @@ export function AccountDetailsPage() {
     </div>
   );
 }
+

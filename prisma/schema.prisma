@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Faculty {
@@ -29,13 +29,13 @@ model Department {
 
 model User {
   id                          Int              @id @default(autoincrement())
+  supabase_id                 String           @unique
   full_name                   String
   user_type                   String
   registration_or_employee_no String           @unique
   designation                 String?
   telephone                   String?
   email                       String           @unique
-  password                    String
   department_id               Int
   created_at                  DateTime         @default(now())
   received_user_messages      Message[]        @relation("UserReceiver")
@@ -48,11 +48,11 @@ model User {
 
 model Admin {
   id                      Int              @id @default(autoincrement())
+  supabase_id             String?          @unique
   full_name               String
   admin_role              String
   telephone               String?
   email                   String           @unique
-  password                String
   department_id           Int?
   faculty_id              Int?
   created_at              DateTime         @default(now())

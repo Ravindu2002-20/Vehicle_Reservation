@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/current-user";
 
 function parseId(idParam: string) {
   const id = Number(idParam);
@@ -13,16 +13,16 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authUser = getAuthUser();
-    if (!authUser) return unauthorized();
+    const authUser = await getCurrentUser();
+    if (!authUser) {
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
 
     const requestId = parseId(params.id);
     if (!requestId) {
       return NextResponse.json({ status: 400, error: "Invalid request id" }, { status: 400 });
     }
 
-    // Student can only view own requests.
-    // Admin roles can view all (if you later add role checks, extend here).
     const request = await prisma.vehicleRequest.findFirst({
       where: {
         id: requestId,
@@ -63,27 +63,29 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authUser = getAuthUser();
-    if (!authUser) return unauthorized();
+    const authUser = await getCurrentUser();
+    if (!authUser) {
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
 
     const requestId = parseId(params.id);
     if (!requestId) {
       return NextResponse.json({ status: 400, error: "Invalid request id" }, { status: 400 });
     }
 
-    // Student can delete only their own requests.
+    if (authUser.type !== "user") {
+      return NextResponse.json({ status: 403, error: "Only users can delete requests" }, { status: 403 });
+    }
+
     const deleted = await prisma.vehicleRequest.deleteMany({
       where: {
         id: requestId,
-        requester_id: authUser.type === "user" ? authUser.id : undefined,
+        requester_id: authUser.id,
       },
     });
 
     if (deleted.count === 0) {
-      return NextResponse.json(
-        { status: 404, error: "Request not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ status: 404, error: "Request not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

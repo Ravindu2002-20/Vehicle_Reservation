@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST() {
-  // Supabase session logout should be handled client-side.
-  // Keeping this endpoint for backward compatibility.
+  const supabase = createSupabaseServerClient();
+  await supabase.auth.signOut();
+
   return NextResponse.json({ status: 200, message: "Logged out" });
 }
 

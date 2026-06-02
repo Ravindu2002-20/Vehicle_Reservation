@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { UniversityDashboard } from "../components/UniversityDashboard";
-import { getAuth } from "@/lib/api";
 
 export type UserRole =
   | "student"
@@ -19,12 +18,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadRole() {
-      const localUser = getAuth();
-      if (!localUser) {
-        router.push("/login");
-        return;
-      }
-
       const normalizeRole = (role: unknown): UserRole => {
         const r = String(role ?? "").trim();
         const normalized = r.includes("_") ? r.replaceAll("_", "-") : r;
@@ -52,13 +45,16 @@ export default function DashboardPage() {
       try {
         const res = await fetch("/api/auth/me");
         const payload = await res.json().catch(() => null);
+
         if (!res.ok || !payload?.data?.role) {
-          setCurrentRole(normalizeRole(localUser.user_type));
-        } else {
-          setCurrentRole(normalizeRole(payload.data.role));
+          router.push("/login");
+          return;
         }
+
+        setCurrentRole(normalizeRole(payload.data.role));
       } catch {
-        setCurrentRole(normalizeRole(localUser.user_type));
+        router.push("/login");
+        return;
       } finally {
         setLoading(false);
       }

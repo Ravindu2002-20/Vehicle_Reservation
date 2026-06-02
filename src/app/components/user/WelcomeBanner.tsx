@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Car, Calendar, MessageSquare, Loader2 } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
-import { getAuth } from "@/lib/api";
+
 
 interface Stats {
   availableVehicles: number;
@@ -14,7 +14,8 @@ interface Stats {
 export function WelcomeBanner() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
-  const userName = getAuth()?.full_name || "User";
+  // Name is not currently provided by /api/auth/me; keep default UI name until backend shape is extended.
+  const userName = "User";
 
   useEffect(() => {
     async function fetchStats() {

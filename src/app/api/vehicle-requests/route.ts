@@ -1,16 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/current-user";
 
 export async function GET(req: Request) {
   try {
+    // Legacy query params still exist in UI; however identity must come from auth.
+    // If user is authenticated, only return their own requests.
+    const authUser = await getCurrentUser();
+    if (!authUser) {
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
-    const user_id = searchParams.get("user_id");
     const status = searchParams.get("status");
 
     const where: any = {};
-    if (user_id) where.requester_id = Number(user_id);
     if (status) where.approval_status = status;
+
+    if (authUser.type === "user") {
+      where.requester_id = authUser.id;
+    }
 
     const requests = await prisma.vehicleRequest.findMany({
       where,
@@ -34,9 +43,12 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const authUser = getAuthUser();
+    const authUser = await getCurrentUser();
     if (!authUser) {
-      return unauthorized();
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
+    if (authUser.type !== "user") {
+      return NextResponse.json({ status: 403, error: "Only users can create requests" }, { status: 403 });
     }
 
     const body = await req.json();
@@ -67,3 +79,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ status: 500, error: (err as Error).message }, { status: 500 });
   }
 }
+

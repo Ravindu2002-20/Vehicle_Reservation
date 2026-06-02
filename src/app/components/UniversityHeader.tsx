@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
 import type { UserRole } from "./UniversityDashboard";
 import type { StudentPage } from "./UniversityDashboard";
-import { getAuth } from "@/lib/api";
+import { useSession } from "@/lib/session";
 
 /** Human-readable labels for every UserRole value */
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -31,13 +31,18 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
   const [notificationCount, setNotificationCount] = useState(0);
   const [userName, setUserName] = useState("User");
 
+
+  const { user } = useSession();
+
   useEffect(() => {
-    const user = getAuth();
-    if (user && user.full_name) {
-      setUserName(user.full_name);
+    if (user?.email) {
+      // full name is not currently returned by /api/auth/me; keep default unless UI provides it elsewhere.
+      // (If you later extend /api/auth/me to include full_name, this will automatically work.)
+      fetchNotificationCount();
+    } else {
+      fetchNotificationCount();
     }
-    fetchNotificationCount();
-  }, []);
+  }, [user?.email]);
 
   async function fetchNotificationCount() {
     try {
@@ -66,19 +71,10 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
 
   const handleSignOut = async () => {
     try {
-      // Supabase logout is client-side.
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (supabaseUrl && supabaseAnonKey) {
-        const mod = await import("@supabase/supabase-js");
-        const supabase = mod.createClient(supabaseUrl, supabaseAnonKey);
-        await supabase.auth.signOut();
-      }
+      await fetch("/api/auth/logout", { method: "POST" });
     } catch {
       // ignore
     }
-    sessionStorage.removeItem("user");
-    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/");
   };
 

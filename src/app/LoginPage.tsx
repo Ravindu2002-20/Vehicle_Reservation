@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -29,20 +30,23 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
-      const data = await response.json();
+      console.log("LOGIN DATA", data);
+      console.log("LOGIN ERROR", error);
 
-      if (response.ok && data.status === 200) {
-        sessionStorage.setItem("user", JSON.stringify(data.data.user));
-        router.push("/dashboard");
-      } else {
-        setError(data.error || "Invalid email or password");
+      if (error) {
+        setError(error.message);
+        return;
       }
+
+      // Wait until the session is available client-side (cookies updated by @supabase/ssr)
+      await supabase.auth.getSession();
+
+      router.push("/dashboard");
     } catch (err) {
       setError("An error occurred during login");
     } finally {

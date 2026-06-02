@@ -1,569 +1,381 @@
-# Vehicle Reservation — Project Notes (Code Bundle)
+# Supabase Auth Integration (Vehicle Reservation System)
 
-This Markdown file documents the current codebase by embedding the most relevant source code sections and summarizing the app architecture.
-
-## What’s inside
-- Prisma schema (data model)
-- Auth/session integration (Supabase + role resolution)
-- Key Next.js API routes
-- Role-based dashboard routing
-- Core session/client utilities
-
-> Note: If you are pasting/uploading to a model with size limits, use chunking. This file may be large.
+> This document describes how authentication/authorization is implemented using **Supabase Auth** + **Prisma** (app DB) + **role mapping**, and lists the auth-related code paths present in this repository.
 
 ---
 
-## Folder structure (current)
-- `prisma/` (schema + migrations)
-- `src/` (Next.js app)
-  - `src/app/` (routes, pages, API endpoints)
-    - `src/app/api/` (Next API routes)
-      - `auth/` (login, logout, me)
-      - `profile/`
-      - `messages/` (inbox, send)
-      - `vehicle-requests/` (create/approve/reject/allocate)
-      - `vehicles/`
-      - `stats/`
-      - `requests/` (history / detail)
-    - `src/app/components/` (UI)
-      - `roles/` (admin/faculty-deputy dashboards)
-      - `student/` (student screens)
-      - `ui/` (shadcn-style UI primitives)
-    - `src/app/dashboard/page.tsx` (role redirect + dashboard render)
-  - `src/lib/` (Prisma, auth helpers, session hook)
+## 1) What is the app using for authentication?
+
+### Supabase Auth (SSO-like email+password auth)
+- Client login uses `supabase.auth.signInWithPassword()`.
+- Auth session is stored in cookies (handled by `@supabase/ssr` helpers).
+- Server-side code uses `supabase.auth.getUser()` to determine the signed-in user.
+
+### Prisma database (authoritative role/profile data)
+- After Supabase Auth returns the user email, the app looks up that email in **Prisma** tables:
+  - `User` table for students/lecturers/etc
+  - `Admin` table for deputy/dean/senior-officer/etc
+
+### Role mapping (Supabase → Prisma)
+- The Supabase identity is only used to confirm that a user is authenticated.
+- The app’s **role** and **department** come from Prisma.
 
 ---
 
-## `prisma/schema.prisma`
+## 2) Repo code overview (auth/session entry points)
 
+### Middleware refresh (cookie/session upkeep)
+**File:** `src/middleware.ts`
 
-```prisma
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-}
-
-model Faculty {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  admins      Admin[]
-  departments Department[]
-
-  @@map("faculty")
-}
-
-model Department {
-  id              Int     @id @default(autoincrement())
-  department_name String
-  faculty_id      Int
-  admins          Admin[]
-  faculty         Faculty @relation(fields: [faculty_id], references: [id])
-  users           User[]
-
-  @@map("department")
-}
-
-model User {
-  id                          Int              @id @default(autoincrement())
-  full_name                   String
-  user_type                   String
-  registration_or_employee_no String           @unique
-  designation                 String?
-  telephone                   String?
-  email                       String           @unique
-  password                    String
-  department_id               Int
-  created_at                  DateTime         @default(now())
-  received_user_messages      Message[]        @relation("UserReceiver")
-  sent_user_messages          Message[]        @relation("UserSender")
-  department                  Department       @relation(fields: [department_id], references: [id])
-  vehicle_requests            VehicleRequest[]
-
-  @@map("user")
-}
-
-model Admin {
-  id                      Int              @id @default(autoincrement())
-  full_name               String
-  admin_role              String
-  telephone               String?
-  email                   String           @unique
-  password                String
-  department_id           Int?
-  faculty_id              Int?
-  created_at              DateTime         @default(now())
-  department              Department?      @relation(fields: [department_id], references: [id])
-  faculty                 Faculty?         @relation(fields: [faculty_id], references: [id])
-  received_admin_messages Message[]        @relation("AdminReceiver")
-  sent_admin_messages     Message[]        @relation("AdminSender")
-  approved_requests       VehicleRequest[] @relation("RequestApprover")
-
-  @@map("admin")
-}
-
-model Driver {
-  id                  Int              @id @default(autoincrement())
-  full_name           String
-  telephone           String?
-  license_number      String           @unique
-  availability_status String
-  created_at          DateTime         @default(now())
-  vehicle_requests    VehicleRequest[]
-
-  @@map("driver")
-}
-
-model Vehicle {
-  id                  Int              @id @default(autoincrement())
-  vehicle_number      String           @unique
-  vehicle_type        String
-  capacity            Int
-  availability_status String
-  vehicle_requests    VehicleRequest[]
-
-  @@map("vehicle")
-}
-
-model VehicleRequest {
-  id                 Int      @id @default(autoincrement())
-  requester_id       Int
-  approved_by        Int?
-  vehicle_id         Int?
-  driver_id          Int?
-  request_type       String
-  vehicle_nature     String
-  number_of_persons  Int
-  travel_date_from   DateTime
-  travel_date_to     DateTime
-  required_time_from String
-  required_time_to   String
-  purpose            String
-  places_to_visit    String?
-  travel_route       String?
-  distance_type      String
-  special_notes      String?
-  approval_status    String   @default("pending")
-  allocation_status  String   @default("pending")
-  admin_remarks      String?
-  trip_remarks       String?
-  created_at         DateTime @default(now())
-  approver           Admin?   @relation("RequestApprover", fields: [approved_by], references: [id])
-  driver             Driver?  @relation(fields: [driver_id], references: [id])
-  requester          User     @relation(fields: [requester_id], references: [id])
-  vehicle            Vehicle? @relation(fields: [vehicle_id], references: [id])
-
-  @@map("vehicle_request")
-}
-
-model Message {
-  id                Int      @id @default(autoincrement())
-  sender_user_id    Int?
-  receiver_user_id  Int?
-  sender_admin_id   Int?
-  receiver_admin_id Int?
-  subject           String?
-  message           String
-  is_read           Boolean  @default(false)
-  created_at        DateTime @default(now())
-  receiver_admin    Admin?   @relation("AdminReceiver", fields: [receiver_admin_id], references: [id])
-  receiver_user     User?    @relation("UserReceiver", fields: [receiver_user_id], references: [id])
-  sender_admin      Admin?   @relation("AdminSender", fields: [sender_admin_id], references: [id])
-  sender_user       User?    @relation("UserSender", fields: [sender_user_id], references: [id])
-
-  @@map("message")
-}
-```
-
----
-
-## `src/lib/**`
-
-### `src/lib/prisma.ts`
-
+Key logic:
 ```ts
-import { PrismaClient } from '@prisma/client';
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-```
-
-### `src/lib/auth.ts`
-
-```ts
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.JWT_SECRET || "vehicle-reservation-secret-key-change-in-production";
-
-export interface JWTPayload {
-  id: number;
-  email: string;
-  full_name: string;
-  user_type: string;
-  department_id: number;
-  registration_or_employee_no: string;
-  type: "user" | "admin";
-}
-
-export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "7d" });
-}
-
-export function verifyToken(token: string): JWTPayload | null {
-  try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload;
-  } catch {
-    return null;
-  }
-}
-
-export function getAuthUser(): JWTPayload | null {
-  try {
-    const cookieStore = cookies();
-    const token = cookieStore.get("auth_token")?.value;
-    if (!token) return null;
-    return verifyToken(token);
-  } catch {
-    return null;
-  }
-}
-
-export function unauthorized() {
-  return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
-}
-```
-
-### `src/lib/session.ts`
-
-```ts
-export type UserRole = 'student' | 'faculty-admin' | 'university-deputy' | 'faculty-deputy' | 'dean' | 'senior-officer';
-
-export interface SessionUser {
-  id: number;
-  email: string;
-  full_name: string;
-  user_type: string;
-  role: UserRole;
-
-  // Department can be present (e.g., student profile) but is optional in the minimal client hook.
-  department?: {
-    faculty?: string | null;
-    name?: string | null;
-  } | null;
-
-  department_id: number;
-  registration_or_employee_no: string;
-  telephone?: string | null;
-}
-
-
-export interface SessionAdmin {
-  id: number;
-  email: string;
-  full_name: string;
-  admin_role: string;
-  role: UserRole;
-  department_id: number;
-}
-
-export type Session = SessionUser | SessionAdmin | null;
-
-// Minimal client-side hook used by UI components.
-// Server components should fetch session data directly.
-export function useSession(): { user: SessionUser } {
-  return {
-    user: {
-      id: 0,
-      email: "",
-      full_name: "",
-      user_type: "",
-      role: "student",
-      department_id: 0,
-      registration_or_employee_no: "",
-    },
-  };
-}
-```
-
-### `src/lib/api.ts`
-
-```ts
-export function getAuth() {
-  let user = null;
-  try {
-    user = JSON.parse(sessionStorage.getItem("user") || "null");
-  } catch {
-    // ignore
-  }
-  if (!user) return null;
-  return user;
-}
-
-export function fetchUser() {
-  return getAuth();
-}
-
-async function parseJsonSafe(res: Response) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-function getFetchError(res: Response, payload: any) {
-  return payload?.error ?? `Request failed with status ${res.status}`;
-}
-
-export async function getUserProfile() {
-  const user = getAuth();
-  if (!user) return null;
-
-  try {
-    const res = await fetch(`/api/profile?user_id=${user.id}`);
-    const payload = await parseJsonSafe(res);
-    if (!res.ok) throw new Error(getFetchError(res, payload));
-    return payload?.data ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export async function getUserRequests() {
-  const user = getAuth();
-  if (!user) return { data: [] as any[] };
-
-  try {
-    const res = await fetch(`/api/vehicle-requests?user_id=${user.id}`);
-    const payload = await parseJsonSafe(res);
-    if (!res.ok) throw new Error(getFetchError(res, payload));
-    return payload;
-  } catch {
-    return { data: [] as any[] };
-  }
-}
-
-export async function getUserRequestById(id: number) {
-  try {
-    const res = await fetch(`/api/requests/${id}`);
-    const payload = await parseJsonSafe(res);
-    if (!res.ok) throw new Error(getFetchError(res, payload));
-    return payload?.data ?? null;
-  } catch (err) {
-    throw err;
-  }
-}
-
-export async function deleteUserRequest(id: number) {
-  try {
-    const res = await fetch(`/api/requests/${id}`, {
-      method: "DELETE",
-    });
-
-    const payload = await parseJsonSafe(res);
-    if (!res.ok) throw new Error(getFetchError(res, payload));
-    return payload?.success === true;
-  } catch (err) {
-    throw err;
-  }
-}
-
-export async function getMessages() {
-  const user = getAuth();
-  if (!user) return [];
-
-  try {
-    const res = await fetch(`/api/messages/inbox?user_id=${user.id}`);
-    const payload = await parseJsonSafe(res);
-    if (!res.ok) throw new Error(getFetchError(res, payload));
-    return payload;
-  } catch {
-    return [];
-  }
-}
-```
-
----
-
-## `src/app/api/**`
-
-### `src/app/api/auth/login/route.ts`
-
-```ts
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
-import { signToken } from "@/lib/auth";
-
-export async function POST(req: Request) {
-  try {
-    const { email, password } = await req.json();
-
-    if (!email || !password) {
-      return NextResponse.json(
-        { status: 400, error: "Email and password are required" },
-        { status: 400 }
-      );
-    }
-
-    // Try finding user first (matches Prisma "user" table)
-    let user = await prisma.user.findUnique({ where: { email } });
-    let userType: "user" | "admin" = "user";
-    let payloadData: any = null;
-
-    if (user) {
-      // Support both bcrypt-hashed and plain text passwords for DB compatibility
-      const passwordValid =
-        user.password.startsWith("$2")
-          ? await bcrypt.compare(password, user.password)
-          : user.password === password;
-
-      if (!passwordValid) {
-        return NextResponse.json(
-          { status: 401, error: "Invalid credentials" },
-          { status: 401 }
-        );
-      }
-
-      payloadData = {
-        id: user.id,
-        email: user.email,
-        full_name: user.full_name,
-        user_type: user.user_type,
-        department_id: user.department_id,
-        registration_or_employee_no: user.registration_or_employee_no,
-      };
-    } else {
-      // Try admin table
-      let admin = await prisma.admin.findUnique({ where: { email } });
-      if (!admin) {
-        return NextResponse.json(
-          { status: 401, error: "Invalid credentials" },
-          { status: 401 }
-        );
-      }
-
-      // Support both bcrypt-hashed and plain text passwords
-      const passwordValid =
-        admin.password.startsWith("$2")
-          ? await bcrypt.compare(password, admin.password)
-          : admin.password === password;
-
-      if (!passwordValid) {
-        return NextResponse.json(
-          { status: 401, error: "Invalid credentials" },
-          { status: 401 }
-        );
-      }
-
-      userType = "admin";
-      payloadData = {
-        id: admin.id,
-        email: admin.email,
-        full_name: admin.full_name,
-        user_type: admin.admin_role,
-        department_id: admin.department_id || 0,
-        registration_or_employee_no: "",
-      };
-    }
-
-    const tokenPayload = {
-      ...payloadData,
-      type: userType as "user" | "admin",
-    };
-
-    const token = signToken(tokenPayload);
-
-    const response = NextResponse.json({
-      status: 200,
-      data: {
-        user: tokenPayload,
-        token,
-      },
-    });
-
-    response.cookies.set("auth_token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    });
-
-    return response;
-  } catch (err) {
-    console.error("Login error:", err);
-    return NextResponse.json(
-      { status: 500, error: "An error occurred during login" },
-      { status: 500 }
-    );
-  }
-}
-```
-
-### `src/app/api/auth/logout/route.ts`
-
-```ts
-import { NextResponse } from "next/server";
-
-export async function POST() {
-  const response = NextResponse.json({ status: 200, message: "Logged out" });
-
-  response.cookies.set("auth_token", "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 0,
-    path: "/",
-  });
-
-  return response;
-}
-```
-
-### `src/app/api/profile/route.ts`
-
-```ts
-import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-
-
-// ─────────────────────────────────────────────
-// GET PROFILE
-// ─────────────────────────────────────────────
-
-export async function GET(req: Request) {
-  try {
-    // Temporary placeholder for authenticated user id.
-    // Current frontend stores auth in sessionStorage; server can't access it,
-    // so we accept a header as a stand-in.
-    const userIdHeader = req.headers.get("x-user-id");
-    const userId = userIdHeader ? Number(userIdHeader) : null;
-
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json({ error: "User ID required" }, { status: 400 });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        department: {
-          include: {
-            faculty: true,
-          },
+import { createServerClient } from "@supabase/ssr";
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          supabaseResponse = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options);
+          });
         },
       },
-    });
+    }
+  );
 
-    if (!user) {
+  // IMPORTANT: This refreshes the auth session
+  const { data: { user } } = await supabase.auth.getUser();
+  return supabaseResponse;
+}
+```
+
+**Why it matters:**
+- Ensures Supabase session is refreshed for incoming requests.
+- Without this, SSR/server routes may observe stale/expired session cookies.
+
+---
+
+## 3) Supabase client utilities
+
+### Server-side Supabase client (cookie-aware)
+**File:** `src/lib/supabase/server.ts`
+
+```ts
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+
+export function createSupabaseServerClient() {
+  const cookieStore = cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name, value) {
+          cookieStore.set({ name, value, path: "/", httpOnly: true });
+        },
+        remove(name) {
+          cookieStore.set({ name, value: "", path: "/", httpOnly: true, maxAge: 0 });
+        },
+      },
+    }
+  );
+}
+```
+
+### Browser/client Supabase instance (used for login)
+**File:** `src/lib/supabase/client.ts`
+
+```ts
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+```
+
+---
+
+## 4) Unified current-user resolver (Supabase user → Prisma role)
+
+**File:** `src/lib/current-user.ts`
+
+### Supported roles
+```ts
+export type UnifiedRoleType =
+  | "student"
+  | "lecturer"
+  | "university-deputy"
+  | "admin-deputy"
+  | "dean"
+  | "senior-officer";
+```
+
+### Authentication flow implemented
+1. Create cookie-aware Supabase server client.
+2. Call `supabase.auth.getUser()`.
+3. If no user/email → return `null`.
+4. Look up user by email in Prisma:
+   - try `prisma.user.findUnique({ where: { email } })`
+   - else try `prisma.admin.findUnique({ where: { email } })`
+5. Extract role:
+   - student role from `user.user_type`
+   - admin role from `admin.admin_role`
+6. Validate role against `VALID_ROLES`.
+
+Key call site:
+```ts
+const supabase = createSupabaseServerClient();
+const { data: { user }, error } = await supabase.auth.getUser();
+```
+
+---
+
+## 5) “Me” and logout API routes (used by frontend)
+
+### Get current auth info
+**File:** `src/app/api/auth/me/route.ts`
+
+Returns:
+- `401` if unauthenticated
+- otherwise: `{ data: { id, email, role, type, department_id } }`
+
+```ts
+const authUser = await getCurrentUser();
+if (!authUser) {
+  return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+}
+
+return NextResponse.json({
+  data: {
+    id: authUser.id,
+    email: authUser.email,
+    role: authUser.role,
+    type: authUser.type,
+    department_id: authUser.department_id,
+  },
+});
+```
+
+### Logout
+**File:** `src/app/api/auth/logout/route.ts`
+
+```ts
+const supabase = createSupabaseServerClient();
+await supabase.auth.signOut();
+return NextResponse.json({ status: 200, message: "Logged out" });
+```
+
+---
+
+## 6) Frontend session handling (client-side)
+
+**File:** `src/lib/session.ts`
+
+This is a `use client` hook that calls `/api/auth/me`.
+
+```ts
+const res = await fetch("/api/auth/me", { method: "GET" });
+if (!res.ok) {
+  setUser(null);
+  setError(payload?.error ?? "Unauthorized");
+  return;
+}
+setUser(payload?.data ?? null);
+```
+
+**Important:**
+- The repository does not rely on localStorage auth state.
+- Identity comes from Supabase cookies via server endpoints (`/api/auth/me`).
+
+---
+
+## 7) Login page (Supabase auth sign-in)
+
+**File:** `src/app/LoginPage.tsx`
+
+On form submit:
+```ts
+const { error } = await supabase.auth.signInWithPassword({
+  email,
+  password,
+});
+```
+
+On success:
+- `router.push("/dashboard")`
+
+---
+
+## 8) Route protection / auth-check behavior
+
+### Client home gate
+**File:** `src/app/page.tsx`
+
+- Calls `/api/auth/me`.
+- If ok → redirect to `/dashboard`.
+- If not → show the login page.
+
+### Dashboard role loading
+**File:** `src/app/dashboard/page.tsx`
+
+- Calls `/api/auth/me` and reads `payload.data.role`.
+- Normalizes role strings.
+- If unauthenticated/invalid → push `/login`.
+
+---
+
+## 9) Other API routes that require authentication
+
+Most API routes call `getCurrentUser()` from `src/lib/current-user.ts`.
+
+Examples:
+
+### Messages inbox
+**File:** `src/app/api/messages/inbox/route.ts`
+```ts
+const authUser = await getCurrentUser();
+if (!authUser) return 401;
+```
+
+### Stats
+**File:** `src/app/api/stats/route.ts`
+```ts
+const authUser = await getCurrentUser();
+if (!authUser) return 401;
+```
+
+### Profile
+**File:** `src/app/api/profile/route.ts`
+- GET returns profile from Prisma
+- PATCH restricts to `authUser.type === "user"`
+
+---
+
+## 10) Auth available in existing codes (explicit listing)
+
+### Supabase Auth methods used
+- `supabase.auth.signInWithPassword()` (login UI)
+  - `src/app/LoginPage.tsx`
+- `supabase.auth.getUser()` (server: middleware + current-user + auth check)
+  - `src/middleware.ts`
+  - `src/lib/current-user.ts`
+- `supabase.auth.signOut()` (logout route)
+  - `src/app/api/auth/logout/route.ts`
+
+### Supabase Admin Auth (server scripts)
+These scripts use **service role key** and admin APIs to create/list users.
+
+#### List users
+- `supabase.auth.admin.listUsers()`
+  - `scripts/check-supabase-users.ts`
+  - `scripts/sync-users-to-supabase-auth.ts`
+
+#### Create users
+- `supabase.auth.admin.createUser()`
+  - `scripts/sync-users-to-supabase-auth.ts`
+  - `prisma/seed.ts`
+
+---
+
+## 11) Supabase user provisioning (seeding + sync scripts)
+
+### Seed script
+**File:** `prisma/seed.ts`
+
+Behavior:
+- Creates faculties/departments/users/admins/drivers/vehicles in Prisma.
+- Creates corresponding **Supabase Auth accounts** for each created Prisma user/admin.
+- Uses `password: "123"` for test accounts.
+
+Key snippet:
+```ts
+const { data: newUser, error } = await supabase.auth.admin.createUser({
+  email,
+  password,
+  email_confirm: true,
+});
+```
+
+Then it stores the returned Supabase Auth user id into Prisma fields (e.g. `supabase_id`).
+
+### Sync Prisma → Supabase Auth
+**File:** `scripts/sync-users-to-supabase-auth.ts`
+
+Behavior:
+- Loads Prisma users/admins.
+- For each, checks Supabase Auth for `email`.
+- If missing, creates Supabase Auth account.
+- Links `supabase_id` back to Prisma.
+
+Admin checks:
+```ts
+const { data } = await supabase.auth.admin.listUsers();
+```
+
+Create:
+```ts
+await supabase.auth.admin.createUser({
+  email: user.email,
+  password: "123",
+  email_confirm: true,
+});
+```
+
+---
+
+## 12) Prisma schema note (password storage)
+
+From `prisma/schema.prisma` included in the repository:
+- `User` model contains `password` (string).
+- `Admin` model contains `password` (string).
+
+However, the app logic indicates that Supabase owns passwords:
+- `src/app/api/profile/route.ts` contains the comment: 
+  > “Supabase owns passwords; do not validate password in Prisma.”
+
+In other words:
+- Prisma password fields are likely legacy/test fields.
+- Actual authentication is performed by Supabase Auth.
+
+---
+
+## 13) Summary (end-to-end)
+
+1. User opens `/` (client).
+2. Client calls `/api/auth/me`.
+3. `/api/auth/me` calls `getCurrentUser()`.
+4. `getCurrentUser()` calls `supabase.auth.getUser()`.
+5. It finds matching Prisma record by email and maps role.
+6. Frontend uses returned `role/type` to render dashboards.
+7. User logs in via `/src/app/LoginPage.tsx` using `supabase.auth.signInWithPassword()`.
+8. Server middleware keeps Supabase session cookies refreshed.
+9. Logout calls `supabase.auth.signOut()`.
+
+---
+
+## 14) Important env vars used
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (used by seed/sync/admin scripts)
+- `DATABASE_URL` (Prisma DB)
+

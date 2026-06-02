@@ -1,44 +1,30 @@
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/current-user";
 
+const allowedFields = ["name", "email", "telephone"] as const;
 
-// ─────────────────────────────────────────────
-// GET PROFILE
-// ─────────────────────────────────────────────
-
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    // Auth on the Next.js server is based on JWT cookie. Query params should not be trusted.
-    // However, to keep compatibility with the existing frontend, we accept either:
-    //   - x-user-id header (preferred by the current client), or
-    //   - user_id query param (legacy)
-    const userIdHeader = req.headers.get("x-user-id");
-    const { searchParams } = new URL(req.url);
-    const userIdQuery = searchParams.get("user_id");
+    const authUser = await getCurrentUser();
 
-    const userIdRaw = userIdHeader ?? userIdQuery;
-    const userId = userIdRaw ? Number(userIdRaw) : null;
-
-    if (!userId || Number.isNaN(userId)) {
-      return NextResponse.json({ error: "User ID required" }, { status: 400 });
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        department: {
-          include: {
-            faculty: true,
+    // Profile UI expects unified shape: { id, full_name, email, telephone, role/user_type, registration_or_employee_no, department:{faculty,name} }
+    if (authUser.type === "user") {
+      const user = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        include: {
+          department: {
+            include: { faculty: true },
           },
         },
-      },
-    });
+      });
 
-    // Unified payload (used by both user and admin profile pages)
-    // Shape: { id, full_name, email, telephone, role }
-    if (user) {
+      if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
       return NextResponse.json({
         data: {
           id: user.id,
@@ -46,7 +32,6 @@ export async function GET(req: Request) {
           email: user.email,
           telephone: user.telephone,
           role: user.user_type,
-          // keep existing fields for current UI compatibility
           user_type: user.user_type,
           registration_or_employee_no: user.registration_or_employee_no,
           department: {
@@ -57,17 +42,11 @@ export async function GET(req: Request) {
       });
     }
 
-    // Fallback: if no user row exists, check if this is an admin account.
-    // NOTE: sessionStorage is not accessible from Next.js route handlers.
-    // We therefore fall back to a safe behavior:
-    //   - try admin lookup unconditionally
-    //   - if admin exists, return unified admin details
-    //   - otherwise, 404
-    const admin = await prisma.admin.findUnique({ where: { id: userId } });
+    const admin = await prisma.admin.findUnique({
+      where: { id: authUser.id },
+    });
 
-    if (!admin) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    if (!admin) return NextResponse.json({ error: "Admin not found" }, { status: 404 });
 
     return NextResponse.json({
       data: {
@@ -76,8 +55,8 @@ export async function GET(req: Request) {
         email: admin.email,
         telephone: (admin as any).telephone ?? null,
         role: admin.admin_role,
-        // keep existing fields for current UI compatibility
         admin_role: admin.admin_role,
+        department_id: admin.department_id || 0,
       },
     });
   } catch (error) {
@@ -86,71 +65,34 @@ export async function GET(req: Request) {
   }
 }
 
-
-
-// ─────────────────────────────────────────────
-// UPDATE PROFILE
-// ─────────────────────────────────────────────
-
 export async function PATCH(req: Request) {
   try {
+    const authUser = await getCurrentUser();
+
+    if (!authUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
+    const { field, value } = body as {
+      field: string;
+      value: string;
+    };
 
-    const {
-      userId,
-      field,
-      value,
-      password,
-    } = body;
-
-    if (!userId || !field || !password) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+    if (!field || !value) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: Number(userId),
-      },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+    if (!allowedFields.includes(field as any)) {
+      return NextResponse.json({ error: "Invalid field" }, { status: 400 });
     }
 
-    // Verify password
-    const passwordMatch = await bcrypt.compare(
-      password,
-      user.password
-    );
+    // Supabase owns passwords; do not validate password in Prisma.
 
-    if (!passwordMatch) {
-      return NextResponse.json(
-        { error: "Incorrect password" },
-        { status: 401 }
-      );
+    if (authUser.type !== "user") {
+      return NextResponse.json({ error: "Only student users can update this profile" }, { status: 403 });
     }
 
-    // Allowed fields only
-    const allowedFields = [
-      "name",
-      "email",
-      "telephone",
-    ];
-
-    if (!allowedFields.includes(field)) {
-      return NextResponse.json(
-        { error: "Invalid field" },
-        { status: 400 }
-      );
-    }
-
-    // Map frontend field → DB field
     const fieldMap: Record<string, string> = {
       name: "full_name",
       email: "email",
@@ -158,23 +100,23 @@ export async function PATCH(req: Request) {
     };
 
     const updatedUser = await prisma.user.update({
-      where: {
-        id: Number(userId),
-      },
-
+      where: { id: authUser.id },
       data: {
         [fieldMap[field]]: value,
       },
+      select: {
+        id: true,
+        full_name: true,
+        email: true,
+        telephone: true,
+        registration_or_employee_no: true,
+      },
     });
 
-    return NextResponse.json(updatedUser);
-
+    return NextResponse.json({ data: updatedUser });
   } catch (error) {
     console.error(error);
-
-    return NextResponse.json(
-      { error: "Failed to update profile" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
   }
 }
+

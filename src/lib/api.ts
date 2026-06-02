@@ -1,18 +1,3 @@
-export function getAuth() {
-  let user = null;
-  try {
-    user = JSON.parse(sessionStorage.getItem("user") || "null");
-  } catch {
-    // ignore
-  }
-  if (!user) return null;
-  return user;
-}
-
-export function fetchUser() {
-  return getAuth();
-}
-
 async function parseJsonSafe(res: Response) {
   try {
     return await res.json();
@@ -25,16 +10,20 @@ function getFetchError(res: Response, payload: any) {
   return payload?.error ?? `Request failed with status ${res.status}`;
 }
 
-export async function getUserProfile() {
-  const user = getAuth();
-  if (!user) return null;
+// Legacy compatibility.
+// Identity must come from Supabase session via `src/lib/session.ts`,
+// not from any client-side storage.
+export function getAuth() {
+  return null;
+}
 
+export function fetchUser() {
+  return null;
+}
+
+export async function getUserProfile() {
   try {
-    const res = await fetch(`/api/profile`, {
-      headers: {
-        "x-user-id": String(user.id),
-      },
-    });
+    const res = await fetch(`/api/profile`);
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload?.data ?? null;
@@ -44,15 +33,8 @@ export async function getUserProfile() {
 }
 
 export async function getUserRequests() {
-  const user = getAuth();
-  if (!user) return { data: [] as any[] };
-
   try {
-    const res = await fetch(`/api/vehicle-requests?user_id=${user.id}`, {
-      headers: {
-        "x-user-id": user.id.toString(),
-      },
-    });
+    const res = await fetch(`/api/vehicle-requests`);
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload;
@@ -87,15 +69,8 @@ export async function deleteUserRequest(id: number) {
 }
 
 export async function getMessages() {
-  const user = getAuth();
-  if (!user) return [];
-
   try {
-    const res = await fetch(`/api/messages/inbox?user_id=${user.id}`, {
-      headers: {
-        "x-user-id": user.id.toString(),
-      },
-    });
+    const res = await fetch(`/api/messages/inbox`);
     const payload = await parseJsonSafe(res);
     if (!res.ok) throw new Error(getFetchError(res, payload));
     return payload;

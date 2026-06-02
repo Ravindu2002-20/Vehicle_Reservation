@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/current-user";
 
 /**
  * Faculty stats that avoids per-faculty N+1 queries and avoids loading large row sets into memory.
@@ -9,16 +9,15 @@ import { getAuthUser, unauthorized } from "@/lib/auth";
  */
 export async function GET(req: Request) {
   try {
-    const authUser = getAuthUser();
-    if (!authUser) return unauthorized();
+    const authUser = await getCurrentUser();
+    if (!authUser) {
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(req.url);
 
-    // Safety cap: if you ever have many faculties, keep response bounded.
     const limit = Math.min(Number(searchParams.get("limit") ?? 50), 200);
 
-    // ---- Requests per faculty (DB aggregated) ----
-    // faculty -> department -> user (requester) -> vehicle_request
     const requestRows = await prisma.$queryRaw<Array<{
       faculty_name: string;
       requests_count: bigint;
@@ -34,8 +33,6 @@ export async function GET(req: Request) {
       LIMIT ${limit}
     `;
 
-    // ---- Unique vehicles per faculty (DB aggregated distinct) ----
-    // Only count vehicle_id that isn't null.
     const vehicleRows = await prisma.$queryRaw<Array<{
       faculty_name: string;
       vehicles_unique_count: bigint;
@@ -72,5 +69,4 @@ export async function GET(req: Request) {
     );
   }
 }
-
 

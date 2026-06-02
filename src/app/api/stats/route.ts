@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser, unauthorized } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/current-user";
 
 export async function GET(req: Request) {
   try {
-    const authUser = getAuthUser();
+    const authUser = await getCurrentUser();
     if (!authUser) {
-      return unauthorized();
+      return NextResponse.json({ status: 401, error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -16,14 +16,14 @@ export async function GET(req: Request) {
       const totalVehicles = await prisma.vehicle.count();
       const activeBookings = await prisma.vehicleRequest.count({
         where: {
-          requester_id: authUser.id,
+          requester_id: authUser.type === "user" ? authUser.id : -1,
           approval_status: "approved",
           allocation_status: "allocated",
         },
       });
       const unreadMessages = await prisma.message.count({
         where: {
-          receiver_user_id: authUser.id,
+          receiver_user_id: authUser.type === "user" ? authUser.id : null,
           is_read: false,
         },
       });
@@ -64,7 +64,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // Generic stats
     const totalVehicles = await prisma.vehicle.count();
     const pendingRequests = await prisma.vehicleRequest.count({
       where: { approval_status: "pending" },
@@ -81,3 +80,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: 500, error: "Failed to fetch stats" }, { status: 500 });
   }
 }
+

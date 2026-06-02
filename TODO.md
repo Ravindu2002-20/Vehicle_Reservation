@@ -1,12 +1,20 @@
-# Vehicle Reservation System - TODO
+# TODO - AUTH BUG INVESTIGATION
 
-## Profile / Account Details page fix
-- [ ] Update `src/lib/api.ts:getUserProfile()` to send `x-user-id` header (remove query param).
-- [ ] Update `src/app/api/profile/route.ts:GET` to fallback to admin lookup when user not found.
-- [ ] Ensure admin and user return unified shape: `{ id, full_name, email, telephone, role: admin_role }`.
-- [ ] Verify profile UI redirects to `/login` when `getAuth()` returns null (avoid silent failure).
-
-## Testing
-- [ ] Run Next.js dev build and verify `/api/profile` works for both user and admin.
-- [ ] Manually test AccountDetailsPage load and editable PATCH flow.
-
+- [ ] Step 1: Add temporary cookie/session logging to:
+  - src/middleware.ts
+  - src/lib/supabase/server.ts (cookieStore.getAll)
+  - src/lib/current-user.ts (supabase.auth.getUser user)
+- [ ] Step 2: Fix LoginPage redirect timing:
+  - src/app/LoginPage.tsx
+  - Wait for signInWithPassword to finish
+  - Call await supabase.auth.getSession() before router.push("/dashboard")
+  - Add LOGIN DATA / LOGIN ERROR logs as requested
+- [ ] Step 3: Improve/verify createServerClient cookie adapter in src/lib/supabase/server.ts:
+  - Ensure cookies are read/written in the exact shape expected by @supabase/ssr
+  - Ensure setAll/remove use correct options (path/httpOnly/sameSite/secure/maxAge)
+- [ ] Step 4: Verify middleware cookie refresh behavior:
+  - src/middleware.ts
+  - Add request cookie logging and ensure setAll persists cookies via NextResponse.cookies
+- [ ] Step 5: Verify mixing approaches:
+  - Search src for @supabase/auth-helpers-nextjs usage (ensure only @supabase/ssr is used)
+- [ ] Step 6: Run app flow + validate DevTools cookies exist and server logs show them

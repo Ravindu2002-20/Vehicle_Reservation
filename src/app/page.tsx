@@ -3,20 +3,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LoginPage from "./LoginPage";
-import { getAuth } from "@/lib/api";
 
 export default function Home() {
+
   const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = getAuth();
-    if (user) {
-      router.push("/dashboard");
-    } else {
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/me", { method: "GET" });
+        if (res.ok) {
+          router.push("/dashboard");
+          return;
+        }
+      } catch {
+        // ignore
+      }
       setLoading(false);
     }
-  }, []);
+
+    checkAuth();
+  }, [router]);
 
   if (loading) {
     return (

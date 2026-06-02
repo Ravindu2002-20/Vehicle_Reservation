@@ -47,16 +47,16 @@ export function MessagesPage() {
     fetchMessages();
   }, [userId]);
 
-
   async function fetchMessages() {
     setLoading(true);
 
-    const res = await fetch(`/api/messages/inbox?user_id=${userId}`);
+    const res = await fetch(`/api/messages/inbox`);
     const payload = await res.json();
 
     setMessages(payload?.data ?? []);
     setLoading(false);
   }
+
 
   async function sendMessage() {
     if (userId == null) return;
