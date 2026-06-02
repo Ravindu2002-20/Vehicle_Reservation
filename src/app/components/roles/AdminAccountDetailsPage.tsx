@@ -9,10 +9,7 @@ type ProfileData = {
   email: string;
   telephone: string | null;
   role: string;
-  user_type?: string;
   admin_role?: string;
-  registration_or_employee_no?: string;
-  designation?: string;
   department?: {
     name: string;
     faculty: string;
@@ -20,14 +17,13 @@ type ProfileData = {
   department_id?: number;
 };
 
-export function AccountDetailsPage() {
+export function AdminAccountDetailsPage() {
   const { user, loading: sessionLoading } = useSession();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -37,7 +33,7 @@ export function AccountDetailsPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
-    if (sessionLoading) return; // Wait until session is resolved
+    if (sessionLoading) return;
     if (!user) {
       setProfileLoading(false);
       setProfileError("Not authenticated");
@@ -74,7 +70,6 @@ export function AccountDetailsPage() {
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
-
     try {
       const res = await fetch("/api/profile", {
         method: "PATCH",
@@ -91,14 +86,7 @@ export function AccountDetailsPage() {
         return;
       }
       setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              full_name: editName,
-              email: editEmail,
-              telephone: editTelephone || null,
-            }
-          : prev
+        prev ? { ...prev, full_name: editName, email: editEmail, telephone: editTelephone || null } : prev
       );
       setSaveSuccess(true);
       setEditing(false);
@@ -120,9 +108,6 @@ export function AccountDetailsPage() {
     setEditing(false);
   };
 
-  const isAdmin = user?.type === "admin";
-
-  // ── Loading states ──────────────────────────────────────────────────────────
   if (sessionLoading || profileLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -138,9 +123,7 @@ export function AccountDetailsPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center max-w-sm">
-          <p className="text-red-600 font-medium">
-            {profileError ?? "Could not load profile"}
-          </p>
+          <p className="text-red-600 font-medium">{profileError ?? "Could not load profile"}</p>
           <button
             onClick={() => window.location.reload()}
             className="mt-3 text-sm text-orange-600 underline hover:text-orange-700"
@@ -152,15 +135,12 @@ export function AccountDetailsPage() {
     );
   }
 
-  // ── Role badge helper ───────────────────────────────────────────────────────
   const roleBadge = (role: string) => {
     const map: Record<string, { label: string; color: string }> = {
-      student: { label: "Student", color: "bg-blue-100 text-blue-700" },
-      lecturer: { label: "Lecturer", color: "bg-purple-100 text-purple-700" },
-      "admin-deputy": { label: "Admin Deputy", color: "bg-orange-100 text-orange-700" },
-      "university-deputy": { label: "University Deputy", color: "bg-green-100 text-green-700" },
-      dean: { label: "Dean", color: "bg-indigo-100 text-indigo-700" },
-      "senior-officer": { label: "Senior Officer", color: "bg-red-100 text-red-700" },
+      "admin-deputy":      { label: "Admin Deputy",      color: "bg-orange-100 text-orange-700" },
+      "university-deputy": { label: "University Deputy", color: "bg-green-100 text-green-700"  },
+      dean:                { label: "Dean",              color: "bg-indigo-100 text-indigo-700" },
+      "senior-officer":    { label: "Senior Officer",    color: "bg-red-100 text-red-700"      },
     };
     const entry = map[role] ?? { label: role, color: "bg-gray-100 text-gray-600" };
     return (
@@ -170,7 +150,6 @@ export function AccountDetailsPage() {
     );
   };
 
-  // ── Field row helper ────────────────────────────────────────────────────────
   const Field = ({
     label,
     value,
@@ -187,9 +166,7 @@ export function AccountDetailsPage() {
     type?: string;
   }) => (
     <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
-        {label}
-      </label>
+      <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</label>
       {editing && editable && onEdit ? (
         <input
           type={type}
@@ -205,13 +182,12 @@ export function AccountDetailsPage() {
     </div>
   );
 
-  // ── Main render ─────────────────────────────────────────────────────────────
   return (
     <div className="px-4 py-6 space-y-6">
-      {/* Header card */}
+
+      {/* Header */}
       <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
         <div className="flex items-center gap-4">
-          {/* Avatar */}
           <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-2xl font-bold text-white shadow-inner">
             {profile.full_name?.charAt(0)?.toUpperCase() ?? "?"}
           </div>
@@ -220,7 +196,6 @@ export function AccountDetailsPage() {
             <p className="text-orange-100 text-sm truncate">{profile.email}</p>
             <div className="mt-1.5">{roleBadge(profile.role)}</div>
           </div>
-          {/* Edit button */}
           {!editing && (
             <button
               onClick={() => setEditing(true)}
@@ -232,7 +207,6 @@ export function AccountDetailsPage() {
         </div>
       </div>
 
-      {/* Success / error banners */}
       {saveSuccess && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-green-700 text-sm font-medium">
           ✓ Profile updated successfully
@@ -244,80 +218,34 @@ export function AccountDetailsPage() {
         </div>
       )}
 
-      {/* Details card */}
+      {/* Details */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
         <div className="px-6 py-4">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-            Personal Information
-          </h2>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Admin Information</h2>
         </div>
 
         <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          <Field
-            label="Full Name"
-            value={profile.full_name}
-            editable
-            editValue={editName}
-            onEdit={setEditName}
-          />
-          <Field
-            label="Email"
-            value={profile.email}
-            editable
-            editValue={editEmail}
-            onEdit={setEditEmail}
-            type="email"
-          />
-          <Field
-            label="Telephone"
-            value={profile.telephone}
-            editable
-            editValue={editTelephone}
-            onEdit={setEditTelephone}
-            type="tel"
-          />
-          {profile.registration_or_employee_no && (
-            <Field
-              label="Registration / Employee No."
-              value={profile.registration_or_employee_no}
-            />
-          )}
-          {profile.designation && (
-            <Field label="Designation" value={profile.designation} />
+          <Field label="Full Name"  value={profile.full_name}  editable editValue={editName}      onEdit={setEditName} />
+          <Field label="Email"      value={profile.email}      editable editValue={editEmail}     onEdit={setEditEmail}     type="email" />
+          <Field label="Telephone"  value={profile.telephone}  editable editValue={editTelephone} onEdit={setEditTelephone} type="tel" />
+          {profile.admin_role && (
+            <Field label="Admin Role" value={profile.admin_role} />
           )}
         </div>
 
-        {/* Department info (users only) */}
         {profile.department && (
           <>
             <div className="px-6 py-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                Department
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Department</h2>
             </div>
             <div className="px-6 py-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               <Field label="Department" value={profile.department.name} />
-              <Field label="Faculty" value={profile.department.faculty} />
-            </div>
-          </>
-        )}
-
-        {/* Admin-specific info */}
-        {isAdmin && profile.admin_role && (
-          <>
-            <div className="px-6 py-4">
-              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                Admin Details
-              </h2>
-            </div>
-            <div className="px-6 py-5">
-              <Field label="Admin Role" value={profile.admin_role} />
+              <Field label="Faculty"    value={profile.department.faculty} />
             </div>
           </>
         )}
       </div>
 
-      {/* Save / Cancel buttons */}
       {editing && (
         <div className="flex gap-3 justify-end">
           <button
@@ -332,9 +260,7 @@ export function AccountDetailsPage() {
             disabled={saving}
             className="px-5 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium transition disabled:opacity-50 flex items-center gap-2"
           >
-            {saving && (
-              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            )}
+            {saving && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
             {saving ? "Saving…" : "Save Changes"}
           </button>
         </div>

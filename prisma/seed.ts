@@ -29,7 +29,7 @@ async function ensureSupabaseUser(email, password, userId, type) {
     // If already exists → fetch existing user
     const { data: existing } = await supabase.auth.admin.listUsers();
 
-    const found = existing?.users?.find((u) => u.email === email);
+    const found = existing?.users?.find((u: any) => u.email === email);
     if (found) return found.id;
 
     console.error(`Failed to create ${email}:`, error.message);

@@ -7,9 +7,10 @@ import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
 import { DeanDashboard } from "./roles/DeanDashboard";
 import { SeniorOfficerDashboard } from "./roles/SeniorOfficerDashboard";
+import { AdminAccountDetailsPage } from "./roles/AdminAccountDetailsPage";
 import { ApprovedRequestsView } from "./roles/ApprovedRequestsView";
 import { DeanApprovedRequestsTable } from "./roles/DeanApprovedRequestsTable";
-
+import { AdminMessagesPage } from "./roles/AdminMessagesPage";
 
 
 export type UserRole =
@@ -33,7 +34,7 @@ export type StudentPage =
   | "settings"
   | "fleet-status";
 
-export type AdminPage = "dashboard" | "approvals";
+export type AdminPage = "dashboard" | "approvals" | "messages";
 
 
 export function isAdminRole(role: UserRole): boolean {
@@ -52,7 +53,7 @@ interface UniversityDashboardProps {
 
 export function UniversityDashboard({ role }: UniversityDashboardProps) {
   const [currentPage, setCurrentPage] = useState<StudentPage>(
-    role === "student" ? "reservation-form" : "dashboard"
+    role === "student" || role === "lecturer" ? "reservation-form" : "dashboard"
   );
 
   // single navigation state: for admin roles we interpret it as AdminPage
@@ -62,6 +63,16 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
 
 
   const renderAdminContent = () => {
+    // Admin "account-details" should show admin account details
+    if (currentPage === "account-details") {
+      return <AdminAccountDetailsPage />;
+    }
+
+    // Admin "messages" tab
+    if (currentPage === "messages") {
+      return <AdminMessagesPage />;
+    }
+
     // Admin "approvals" tab should show the approved requests table
     if (effectiveAdminPage === "approvals") {
       // Dean should see the table in the Dean style/spec

@@ -25,7 +25,7 @@ async function main() {
     return;
   }
   console.log("Supabase Auth users count:", data?.users?.length || 0);
-  data?.users?.forEach((u) =>
+  data?.users?.forEach((u: any) =>
     console.log("  -", u.email, "(id:", u.id, ")")
   );
 }

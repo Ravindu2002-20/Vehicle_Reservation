@@ -29,7 +29,7 @@ const prisma = new PrismaClient();
 
 async function findSupabaseUser(email: string) {
   const { data } = await supabase.auth.admin.listUsers();
-  return data?.users?.find(u => u.email === email) || null;
+  return data?.users?.find((u: any) => u.email === email) || null;
 }
 
 async function main() {

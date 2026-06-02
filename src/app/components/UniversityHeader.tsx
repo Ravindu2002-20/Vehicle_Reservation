@@ -84,7 +84,7 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
         {/* Left side - Page title */}
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Dashboard</h2>
-          <p className="text-sm text-gray-500">Welcome back, {userName}!</p>
+          <p className="text-sm text-gray-500">Welcome back !</p>
         </div>
 
         {/* Right side - Notifications and Profile */}

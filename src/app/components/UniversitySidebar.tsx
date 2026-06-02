@@ -29,13 +29,13 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
   ];
 
   // Admin menu items.
-  // Admin menu items.
   const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
     { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
     { id: "approvals" as AdminPage, label: "Approvals", icon: FileCheck },
+    { id: "messages" as AdminPage, label: "Messages", icon: MessageSquare },
   ];
 
-  const menuItems = role === "student" ? studentMenuItems : adminMenuItems;
+  const menuItems = role === "student" || role === "lecturer" ? studentMenuItems : adminMenuItems;
 
 
   return (

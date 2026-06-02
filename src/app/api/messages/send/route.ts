@@ -1,42 +1,102 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/current-user";
 
 export async function POST(req: Request) {
-  const body = await req.json();
-
   try {
-    const sender_type = body.sender_type === "user" ? "user" : "admin";
-    const data: any = {};
+    const authUser = await getCurrentUser();
 
-    // Support both payload styles:
-    // 1) { sender_type, sender_id, receiver_user_id|receiver_admin_id }
-    // 2) { sender_user_id, receiver_admin_id }
-    if (sender_type === "user") {
-      data.sender_user_id = body.sender_user_id ?? body.sender_id;
-    } else {
-      data.sender_admin_id = body.sender_admin_id ?? body.sender_id;
+    console.log("=== SEND MESSAGE API ===");
+    console.log("AUTH USER:", authUser);
+
+    if (!authUser) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    data.receiver_user_id = body.receiver_user_id;
-    data.receiver_admin_id = body.receiver_admin_id;
+    const body = await req.json();
 
-    data.message = body.message;
-    data.subject = body.subject;
+    console.log("REQUEST BODY:", body);
 
-    if (!data.message || (!data.receiver_user_id && !data.receiver_admin_id)) {
+    const email = body.email?.trim();
+    const subject = body.subject?.trim() || null;
+    const message = body.message?.trim();
+
+    if (!email || !message) {
       return NextResponse.json(
-        { status: 400, error: "Missing required fields" },
+        {
+          error: "Email and message are required",
+          received: body,
+        },
         { status: 400 }
       );
     }
 
-    const result = await prisma.message.create({ data });
-    return NextResponse.json({ status: 200, data: result });
+    // Find recipient in User table
+    const userRecipient = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Find recipient in Admin table
+    const adminRecipient = await prisma.admin.findUnique({
+      where: { email },
+    });
+
+    console.log("USER RECIPIENT:", userRecipient);
+    console.log("ADMIN RECIPIENT:", adminRecipient);
+
+    if (!userRecipient && !adminRecipient) {
+      return NextResponse.json(
+        {
+          error: "Recipient not found",
+          email,
+        },
+        { status: 404 }
+      );
+    }
+
+    const data: any = {
+      subject,
+      message,
+    };
+
+    // Sender
+    if (authUser.type === "user") {
+      data.sender_user_id = authUser.id;
+    } else {
+      data.sender_admin_id = authUser.id;
+    }
+
+    // Receiver
+    if (userRecipient) {
+      data.receiver_user_id = userRecipient.id;
+    }
+
+    if (adminRecipient) {
+      data.receiver_admin_id = adminRecipient.id;
+    }
+
+    console.log("MESSAGE DATA:", data);
+
+    const result = await prisma.message.create({
+      data,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Message sent successfully",
+      data: result,
+    });
   } catch (err) {
+    console.error("SEND MESSAGE ERROR:", err);
+
     return NextResponse.json(
-      { status: 500, error: (err as Error).message },
+      {
+        error: err instanceof Error ? err.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
 }
-
