@@ -41,6 +41,9 @@ export async function GET(req: Request) {
       const pendingApprovals = await prisma.vehicleRequest.count({
         where: { approval_status: "pending" },
       });
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
       const approvedToday = await prisma.vehicleRequest.count({
         where: {
           approval_status: "approved",
@@ -49,6 +52,16 @@ export async function GET(req: Request) {
           },
         },
       });
+
+      const approvedThisMonth = await prisma.vehicleRequest.count({
+        where: {
+          approval_status: "approved",
+          created_at: {
+            gte: startOfMonth,
+          },
+        },
+      });
+
       const rejectedCount = await prisma.vehicleRequest.count({
         where: { approval_status: "rejected" },
       });
@@ -58,10 +71,12 @@ export async function GET(req: Request) {
         data: {
           pendingApprovals,
           approvedToday,
+          approvedThisMonth,
           rejectedCount,
           totalUsers,
         },
       });
+
     }
 
     const totalVehicles = await prisma.vehicle.count();

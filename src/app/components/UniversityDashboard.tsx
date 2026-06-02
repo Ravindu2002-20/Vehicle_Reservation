@@ -6,8 +6,11 @@ import { StudentDashboard } from "./user/StudentDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
 import { DeanDashboard } from "./roles/DeanDashboard";
-import { FleetStatusView } from "./roles/FleetStatusView";
 import { SeniorOfficerDashboard } from "./roles/SeniorOfficerDashboard";
+import { ApprovedRequestsView } from "./roles/ApprovedRequestsView";
+import { DeanApprovedRequestsTable } from "./roles/DeanApprovedRequestsTable";
+
+
 
 export type UserRole =
   | "student"
@@ -30,7 +33,8 @@ export type StudentPage =
   | "settings"
   | "fleet-status";
 
-export type AdminPage = "dashboard" | "approvals" | "fleet-status";
+export type AdminPage = "dashboard" | "approvals";
+
 
 export function isAdminRole(role: UserRole): boolean {
   return (
@@ -58,8 +62,13 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
 
 
   const renderAdminContent = () => {
-    if (effectiveAdminPage === "fleet-status") {
-      return <FleetStatusView />;
+    // Admin "approvals" tab should show the approved requests table
+    if (effectiveAdminPage === "approvals") {
+      // Dean should see the table in the Dean style/spec
+      if (role === "dean") {
+        return <DeanApprovedRequestsTable />;
+      }
+      return <ApprovedRequestsView />;
     }
 
     // Default dashboard view for each admin role

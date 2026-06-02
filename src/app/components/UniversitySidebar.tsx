@@ -28,16 +28,15 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "previous-requests" as StudentPage, label: "Previous Requests", icon: History },
   ];
 
-  // Admin menu items (use AdminPage ids but cast to StudentPage since UniversityDashboard stores a StudentPage state)
+  // Admin menu items.
+  // Admin menu items.
   const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
     { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
     { id: "approvals" as AdminPage, label: "Approvals", icon: FileCheck },
-    { id: "fleet-status" as AdminPage, label: "Fleet Status", icon: Car },
   ];
 
-
-
   const menuItems = role === "student" ? studentMenuItems : adminMenuItems;
+
 
   return (
     <div className="w-64 bg-gradient-to-b from-amber-600 to-orange-600 text-white shadow-xl relative">
