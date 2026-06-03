@@ -22,8 +22,9 @@ const ROLE_LABELS: Record<UserRole, string> = {
 
 interface UniversityHeaderProps {
   role: UserRole;
-  onPageChange: (page: StudentPage) => void;
+  onPageChange: (page: any) => void;
 }
+
 
 
 export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) {

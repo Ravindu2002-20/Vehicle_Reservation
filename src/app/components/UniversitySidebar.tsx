@@ -1,4 +1,4 @@
-import { FileText, MessageSquare, History, LayoutDashboard, Settings, FileCheck, Users, BarChart3, Car } from "lucide-react";
+import { FileText, MessageSquare, History, LayoutDashboard, FileCheck, Users, Car, Calendar, Activity } from "lucide-react";
 import type { AdminPage, StudentPage, UserRole } from "./UniversityDashboard";
 
 
@@ -16,9 +16,10 @@ type UniversitySidebarPage = StudentPage | AdminPage;
 
 interface UniversitySidebarProps {
   role: UserRole;
-  currentPage: StudentPage;
-  onPageChange: (page: StudentPage) => void;
+  currentPage: StudentPage | any;
+  onPageChange: (page: any) => void;
 }
+
 
 export function UniversitySidebar({ role, currentPage, onPageChange }: UniversitySidebarProps) {
   // Student menu items
@@ -28,6 +29,18 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "previous-requests" as StudentPage, label: "Previous Requests", icon: History },
   ];
 
+  // Senior Officer menu items.
+  // IMPORTANT: fully isolated menu; other roles keep their current behavior.
+  const seniorOfficerMenuItems: Array<{ id: any; label: string; icon: any }> = [
+    { id: "senior-dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "vehicle-allocation", label: "Vehicle Allocation", icon: FileCheck },
+    { id: "schedule", label: "Schedule", icon: Calendar },
+    { id: "vehicle-status", label: "Vehicle Status", icon: Activity },
+    { id: "drivers", label: "Drivers", icon: Users },
+    { id: "vehicles", label: "Vehicles", icon: Car },
+    { id: "messages", label: "Messages", icon: MessageSquare },
+  ];
+
   // Admin menu items.
   const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
     { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
@@ -35,7 +48,13 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "messages" as AdminPage, label: "Messages", icon: MessageSquare },
   ];
 
-  const menuItems = role === "student" || role === "lecturer" ? studentMenuItems : adminMenuItems;
+  const menuItems =
+    role === "student" || role === "lecturer"
+      ? studentMenuItems
+      : role === "senior-officer"
+        ? seniorOfficerMenuItems
+        : adminMenuItems;
+
 
 
   return (

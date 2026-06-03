@@ -1,90 +1,200 @@
-# ✅ Vehicle Reservation System — Workflow Enforcement Specification
+# Vehicle Reservation System — Workflow Enforcement Specification (Final Version)
 
 ## System Objective
 
-You are working on a Vehicle Reservation System backend built with:
+This document defines the authoritative workflow, approval routing, security rules, request visibility, PDF handling, and audit requirements for the Vehicle Reservation System.
+
+Technology Stack:
 
 * Next.js
 * Prisma
 * Supabase Auth
 
-Your responsibility is to enforce a strict multi-stage approval workflow for vehicle requests while preserving the existing authentication, database schema, and API architecture unless explicitly instructed otherwise.
+The workflow must be enforced server-side while preserving:
 
----
-
-# 🔐 Core Principles (NON-NEGOTIABLE)
-
-### Authentication
-
-Do **NOT** modify or break:
-
-* Supabase Auth
-* Prisma ↔ Supabase user mapping
-* Existing login/session flow
+* Existing Supabase Authentication
+* Existing Prisma relationships
+* Existing API architecture
 * Existing `getCurrentUser()` implementation
 
-### Database
+---
 
-Do **NOT** redesign the database schema unless explicitly requested.
+# Core Principles
 
-Existing tables and relationships should remain intact.
+## Authentication
 
-### Scope of Changes
+The following components must NOT be modified:
 
-Only modify logic related to:
-
-* Vehicle request workflow
-* Approval routing
-* Request visibility
-* Role-based approval actions
-
-### Security
-
-All role checks and workflow enforcement MUST occur server-side.
-
-Use:
-
-```ts
-getCurrentUser()
-```
-
-inside API routes.
-
-Never rely solely on frontend filtering.
+* Supabase Auth
+* Session management
+* Login flow
+* Prisma ↔ Supabase user mapping
+* `getCurrentUser()`
 
 ---
 
-# 🚗 Vehicle Request Approval Workflow
+## Database
 
-## Stage 1 — Request Creation
+Do not redesign the database schema unless explicitly requested.
 
-### Actor
+Existing relationships must remain intact.
+
+---
+
+## Security
+
+All workflow validation must occur server-side.
+
+Every API endpoint must validate:
+
+```ts
+const currentUser = await getCurrentUser();
+```
+
+Frontend filtering is optional.
+
+Backend enforcement is mandatory.
+
+---
+
+# Request Creation
+
+## Actors
 
 * Student
 * Lecturer
 
-### Action
+---
 
-Create a vehicle request.
+## Request Form Fields
 
-### Initial State
+### Basic Information
+
+```text
+Purpose
+Destination
+Travel Date
+Return Date
+Passengers
+Trip Type
+```
+
+---
+
+### Deputy Registrar Selection
+
+The requester must select the Deputy Registrar that should receive the request after Dean approval.
+
+Options:
+
+```text
+Final Destination
+
+○ General Admin Deputy Registrar
+○ University Deputy Registrar
+```
+
+Stored as:
+
+```text
+target_deputy_role
+```
+
+Allowed values:
+
+```text
+admin_deputy
+university_deputy
+```
+
+---
+
+### Request Letter Upload
+
+The requester must upload a request letter PDF.
+
+Field:
+
+```text
+Request Letter PDF
+```
+
+Accepted MIME Type:
+
+```text
+application/pdf
+```
+
+Recommended Maximum Size:
+
+```text
+10 MB
+```
+
+---
+
+# PDF Storage
+
+## Storage Requirement
+
+PDF files must NOT be stored in Supabase Storage.
+
+PDF files must be stored locally on the application server.
+
+Example:
+
+```text
+/uploads/request-letters/
+```
+
+Example structure:
+
+```text
+uploads/
+└── request-letters/
+    ├── request_001.pdf
+    ├── request_002.pdf
+    └── request_003.pdf
+```
+
+---
+
+## Database Storage
+
+Only the file path should be stored.
+
+Example field:
+
+```text
+request_letter_path
+```
+
+Example value:
+
+```text
+/uploads/request-letters/request_001.pdf
+```
+
+---
+
+# Initial Request Status
+
+When a request is created:
 
 ```text
 approval_status   = pending_dean
 allocation_status = pending
 ```
 
+Every request starts with Dean approval.
+
+No request may bypass the Dean.
+
 ---
 
-## Stage 2 — Dean Approval (Faculty Gatekeeper)
+# Dean Approval Stage
 
-### Purpose
-
-The Dean acts as the first approval authority.
-
-Every request must be reviewed by the Dean of the requester's faculty before any higher-level administrator can access it.
-
-### Visibility
+## Visibility
 
 Dean can only view:
 
@@ -92,49 +202,100 @@ Dean can only view:
 approval_status = pending_dean
 ```
 
-### Restrictions
+---
 
-The following roles must NOT see these requests:
+## Faculty Restriction
 
-* Admin Deputy
-* University Deputy Registrar
-* Senior Officer
+Dean approval is only allowed when:
 
-Until dean approval occurs.
-
-### Faculty Constraint
-
-The Dean reviewing the request must belong to the same faculty as the requester.
+```text
+Requester Faculty
+        ==
+Dean Faculty
+```
 
 Example:
 
 ```text
-Requester Faculty = Engineering
-
-Only Engineering Dean can approve/reject.
+Engineering Student
+        ↓
+Engineering Dean
 ```
 
-### Approval Outcome
+A Dean from another faculty must not be able to approve or reject the request.
 
-#### Approve
+---
+
+## Available Actions
+
+### Approve
+
+When approved:
+
+If:
+
+```text
+target_deputy_role = admin_deputy
+```
+
+Then:
 
 ```text
 approval_status = pending_admin_deputy
 ```
 
-Store dean approval information.
+---
 
-#### Reject
+If:
+
+```text
+target_deputy_role = university_deputy
+```
+
+Then:
+
+```text
+approval_status = pending_university_deputy
+```
+
+---
+
+### Reject
+
+Clicking Reject must open a popup dialog.
+
+Required field:
+
+```text
+Rejection Reason
+```
+
+Buttons:
+
+```text
+Send
+Cancel
+```
+
+Upon submission:
 
 ```text
 approval_status = rejected
 ```
 
+Store:
+
+```text
+rejected_by
+rejected_at
+rejection_reason
+```
+
 ---
 
-## Stage 3 — Admin Deputy Approval
+# General Admin Deputy Registrar Stage
 
-### Visibility
+## Visibility
 
 Admin Deputy can only view:
 
@@ -142,54 +303,39 @@ Admin Deputy can only view:
 approval_status = pending_admin_deputy
 ```
 
-### Available Actions
-
-* Approve
-* Reject
-
-### Routing Logic
-
-Admin Deputy determines the next stage based on trip distance/type.
-
 ---
 
-### Short Trip
+## Available Actions
 
-If:
+### Approve
 
-```text
-distance_type = short
-```
-
-Then:
+When approved:
 
 ```text
 approval_status = approved_for_allocation
 ```
 
-Route directly to Senior Officer.
-
 ---
 
-### Long Trip
+### Reject
 
-If:
+Display rejection dialog.
 
-```text
-distance_type = long
-```
-
-Then:
+Required field:
 
 ```text
-approval_status = pending_university_deputy
+Rejection Reason
 ```
 
-Route to University Deputy Registrar.
+Store:
 
----
+```text
+rejected_by
+rejected_at
+rejection_reason
+```
 
-### Rejection
+Update:
 
 ```text
 approval_status = rejected
@@ -197,34 +343,49 @@ approval_status = rejected
 
 ---
 
-## Stage 4 — University Deputy Registrar Approval
+# University Deputy Registrar Stage
 
-### Purpose
+## Visibility
 
-Required only for long-distance trips.
-
-### Visibility
-
-University Deputy can only view:
+University Deputy Registrar can only view:
 
 ```text
 approval_status = pending_university_deputy
 ```
 
-### Available Actions
+---
 
-* Approve
-* Reject
+## Available Actions
 
-### Approval Outcome
+### Approve
 
-#### Approve
+When approved:
 
 ```text
 approval_status = approved_for_allocation
 ```
 
-#### Reject
+---
+
+### Reject
+
+Display rejection dialog.
+
+Required field:
+
+```text
+Rejection Reason
+```
+
+Store:
+
+```text
+rejected_by
+rejected_at
+rejection_reason
+```
+
+Update:
 
 ```text
 approval_status = rejected
@@ -232,9 +393,9 @@ approval_status = rejected
 
 ---
 
-## Stage 5 — Senior Officer Allocation
+# Senior Officer Allocation Stage
 
-### Visibility
+## Visibility
 
 Senior Officer can only view:
 
@@ -242,20 +403,28 @@ Senior Officer can only view:
 approval_status = approved_for_allocation
 ```
 
-### Responsibilities
+---
+
+## Responsibilities
 
 Assign:
 
-* Vehicle
-* Driver
+```text
+Vehicle
+Driver
+```
 
-### Allocation Completion
+---
+
+## Allocation Completion
+
+After assignment:
 
 ```text
 allocation_status = allocated
 ```
 
-### Final State
+Final state:
 
 ```text
 approval_status   = approved_for_allocation
@@ -264,205 +433,257 @@ allocation_status = allocated
 
 ---
 
-# 👁️ Strict Visibility Rules
+# Rejected Request Rules
 
-## Request Visibility Matrix
+## Rejected Requests
 
-| Role              | Can View                  |
-| ----------------- | ------------------------- |
-| Dean              | pending_dean              |
-| Admin Deputy      | pending_admin_deputy      |
-| University Deputy | pending_university_deputy |
-| Senior Officer    | approved_for_allocation   |
+Rejected requests must remain permanently stored.
+
+Never automatically delete rejected requests.
 
 ---
 
-## Enforcement Rules
+## Editing Rejected Requests
 
-### Forbidden
-
-No role may view requests from future stages.
+Not allowed.
 
 ```text
-❌ Dean cannot view Admin Deputy requests
-❌ Admin Deputy cannot view University Deputy requests
-❌ University Deputy cannot view allocation queue
-❌ Senior Officer cannot view Dean queue
-```
-
-### No Bypassing
-
-The workflow must never allow:
-
-```text
-❌ User → Admin Deputy
-❌ User → University Deputy
-❌ Dean → Senior Officer
-❌ Admin Deputy → Senior Officer (for long trips)
+User cannot edit rejected requests.
 ```
 
 ---
 
-# 🧠 Business Logic Rules
+## Resubmitting Rejected Requests
 
-## 1. Faculty Constraint
-
-Dean approval requires faculty matching.
+Not allowed.
 
 ```text
-Requester Faculty
-        ==
-Dean Faculty
-```
-
-Requests cannot be approved by a Dean from another faculty.
-
----
-
-## 2. Approval Chain Integrity
-
-Every request must follow the exact workflow below.
-
-### Short Trip
-
-```text
-User
-  ↓
-Dean
-  ↓
-Admin Deputy
-  ↓
-Senior Officer
+User cannot resubmit rejected requests.
 ```
 
 ---
 
-### Long Trip
+## Creating New Request
+
+If a request is rejected:
 
 ```text
-User
-  ↓
-Dean
-  ↓
-Admin Deputy
-  ↓
-University Deputy
-  ↓
-Senior Officer
+Requester must create a completely new request.
 ```
 
-No stage may be skipped.
-
----
-
-## 3. Trip Type Routing
-
-| Trip Type  | Workflow                                                 |
-| ---------- | -------------------------------------------------------- |
-| Short Trip | Dean → Admin Deputy → Senior Officer                     |
-| Long Trip  | Dean → Admin Deputy → University Deputy → Senior Officer |
-
----
-
-## 4. Data Integrity Rules
-
-### Approval History
-
-Never overwrite previous approvals.
-
-Example:
+The new request receives:
 
 ```text
-Dean Approval
-Admin Deputy Approval
-University Deputy Approval
+New Request ID
+New Approval Chain
+New Audit History
 ```
-
-must remain preserved.
-
-### Audit Trail
-
-Maintain historical approval records.
-
-Do not remove:
-
-* Previous approver IDs
-* Approval timestamps
-* Historical status transitions
-
-### Rejections
-
-Rejected requests must remain stored for auditing.
-
-Never delete rejected requests automatically.
 
 ---
 
-# 🔧 Backend Enforcement Requirements
+# Request Visibility Matrix
 
-The workflow state machine must be enforced inside API routes.
+| Role                           | Visible Status            |
+| ------------------------------ | ------------------------- |
+| Dean                           | pending_dean              |
+| General Admin Deputy Registrar | pending_admin_deputy      |
+| University Deputy Registrar    | pending_university_deputy |
+| Senior Officer                 | approved_for_allocation   |
 
-### Required Locations
+---
+
+# PDF Access Rules
+
+## Request Owner
+
+Can:
+
+```text
+View PDF
+Download PDF
+```
+
+---
+
+## Dean
+
+Can:
+
+```text
+View PDF
+Download PDF
+```
+
+---
+
+## General Admin Deputy Registrar
+
+Can:
+
+```text
+View PDF
+Download PDF
+```
+
+---
+
+## University Deputy Registrar
+
+Can:
+
+```text
+View PDF
+Download PDF
+```
+
+---
+
+## Senior Officer
+
+Can:
+
+```text
+View PDF
+Download PDF
+```
+
+---
+
+## Unauthorized Access
+
+Must return:
+
+```text
+403 Forbidden
+```
+
+---
+
+# Approval History Requirements
+
+Approval history must never be overwritten.
+
+Store all actions:
+
+```text
+Approver ID
+Approver Role
+Decision
+Timestamp
+Remarks
+```
+
+---
+
+# Audit Trail Requirements
+
+Maintain historical records of:
+
+```text
+Approvals
+Rejections
+Allocations
+Status Changes
+```
+
+Historical records must never be removed automatically.
+
+---
+
+# Backend Enforcement Requirements
+
+Workflow enforcement must be implemented inside:
 
 ```text
 /api/vehicle-requests/*
 ```
 
-and
+---
+
+## Required Validation
+
+Before any action:
 
 ```ts
-getCurrentUser()
+const currentUser = await getCurrentUser();
 ```
 
-role validation logic.
+must validate:
 
-### Backend Responsibilities
-
-Validate:
-
-* Current role
-* Current approval state
-* Faculty ownership
-* Trip routing rules
-
-before allowing any action.
-
-### Important
-
-Frontend filtering is optional.
-
-Backend validation is mandatory.
+```text
+User Identity
+User Role
+Current Status
+Faculty Ownership
+Approval Permissions
+Allocation Permissions
+PDF Permissions
+```
 
 ---
 
-# 📌 State Machine (Source of Truth)
+# Forbidden Actions
+
+The backend must prevent:
 
 ```text
+Dean approving requests outside their faculty
+
+Admin Deputy approving Dean queue
+
+University Deputy approving Dean queue
+
+Senior Officer approving requests
+
+Requester approving requests
+
+Unauthorized PDF access
+
+Unauthorized PDF downloads
+```
+
+---
+
+# Workflow State Machine
+
+## Main Workflow
+
+```text
+Requester
+     ↓
 pending_dean
-    ↓
-pending_admin_deputy
-    ↓
- ┌───────────────┐
- │ Short Trip    │
- └───────┬───────┘
-         ↓
-approved_for_allocation
-         ↓
-allocated
+     ↓
 
+ ┌──────────────────────────┐
+ │ Dean Approval            │
+ └────────────┬─────────────┘
+              │
+              │
+      Selected Destination
+              │
+     ┌────────┴────────┐
+     │                 │
+     ▼                 ▼
 
- ┌───────────────┐
- │ Long Trip     │
- └───────┬───────┘
-         ↓
-pending_university_deputy
-         ↓
+pending_admin_deputy   pending_university_deputy
+     │                 │
+     │                 │
+     ▼                 ▼
+
 approved_for_allocation
-         ↓
+            │
+            ▼
+
+Senior Officer Allocation
+            │
+            ▼
+
 allocated
 ```
 
-Rejected path:
+---
+
+# Rejection Flow
 
 ```text
 pending_dean
@@ -476,29 +697,36 @@ pending_university_deputy
 
 ---
 
-# 🔒 Future Extension Rule
-
-This workflow is the authoritative source of truth.
-
-Any future role, approval level, or business process must:
+# Final Status Values
 
 ```text
-Extend the state machine
+pending_dean
+
+pending_admin_deputy
+
+pending_university_deputy
+
+approved_for_allocation
+
+allocated
+
+rejected
 ```
 
-and must never:
+---
 
-```text
-Replace the state machine
-```
+# Source of Truth
 
-All future workflow enhancements must preserve:
+This specification is the authoritative source of truth for the Vehicle Reservation System workflow.
 
-* Approval chain integrity
-* Visibility restrictions
-* Audit history
+Future enhancements must preserve:
+
 * Server-side enforcement
-* Faculty-based authorization
+* Approval history
+* Audit history
+* Faculty authorization
+* Role-based visibility
+* PDF access controls
+* Approval chain integrity
 
-```
-```
+All future workflow enhancements must extend this state machine and must never replace it.

@@ -167,6 +167,8 @@ function categoryLabel(c: Complaint["category"]) {
 }
 
 export function SeniorOfficerDashboard({ currentPage }: { currentPage?: string }) {
+  // Legacy mocked component. Kept for backward compatibility.
+
   const [requestSearch, setRequestSearch] = useState("");
   const [requestStatusFilter, setRequestStatusFilter] = useState<string>("all");
   const [complaintSearch, setComplaintSearch] = useState("");
