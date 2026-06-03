@@ -38,9 +38,13 @@ export function PreviousRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+
   useEffect(() => {
     loadRequests();
   }, []);
+
 
   async function loadRequests() {
     setLoading(true);
@@ -100,6 +104,20 @@ export function PreviousRequestsPage() {
     );
   }
 
+  const filteredRequests = requests.filter((req) => {
+    const s = (req.approval_status || "").toLowerCase();
+    const matchesStatus = statusFilter === "all" ? true : s === statusFilter;
+
+    const q = query.trim().toLowerCase();
+    const matchesQuery = !q
+      ? true
+      : String(req.id).includes(q) ||
+        (req.request_type || "").toLowerCase().includes(q) ||
+        (req.vehicle_nature || "").toLowerCase().includes(q);
+
+    return matchesStatus && matchesQuery;
+  });
+
   return (
     <div className="space-y-5">
       <div>
@@ -111,8 +129,35 @@ export function PreviousRequestsPage() {
         </p>
       </div>
 
-      {requests.map((req) => {
+      {/* Search + Status Filter */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by request id / type / vehicle"
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+        />
+
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+        >
+          <option value="all">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+
+        <div className="text-sm text-gray-500 flex items-center">
+          Showing {filteredRequests.length} request{filteredRequests.length === 1 ? "" : "s"}
+        </div>
+      </div>
+
+
+      {filteredRequests.map((req) => {
         const isOpen = expandedId === req.id;
+
 
         return (
           <Card

@@ -23,10 +23,12 @@ interface UniversitySidebarProps {
 export function UniversitySidebar({ role, currentPage, onPageChange }: UniversitySidebarProps) {
   // Student menu items
   const studentMenuItems: Array<{ id: StudentPage; label: string; icon: any }> = [
+    { id: "dashboard" as StudentPage, label: "Dashboard", icon: LayoutDashboard },
     { id: "reservation-form" as StudentPage, label: "Vehicle Reservation", icon: FileText },
     { id: "messages" as StudentPage, label: "Messages", icon: MessageSquare },
     { id: "previous-requests" as StudentPage, label: "Previous Requests", icon: History },
   ];
+
 
   // Admin menu items.
   const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [

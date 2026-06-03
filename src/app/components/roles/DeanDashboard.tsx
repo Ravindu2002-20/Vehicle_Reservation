@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { Clock, Award, CheckCircle2 } from "lucide-react";
 
 import { PendingApprovalsView } from "./PendingApprovalsView";
-
+import { OngoingRequestsView } from "./OngoingRequestsView";
 
 import {
   Card,
+
   CardContent,
   CardDescription,
   CardHeader,
@@ -132,7 +133,13 @@ export function DeanDashboard({ currentPage }: { currentPage?: string }) {
         <PendingApprovalsView />
       </div>
 
+      {/* Ongoing Request */}
+      <div className="pt-4">
+        <OngoingRequestsView />
+      </div>
+
     </div>
   );
 }
+
 

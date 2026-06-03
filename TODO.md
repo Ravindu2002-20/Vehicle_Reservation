@@ -18,3 +18,16 @@
 - [ ] Step 5: Verify mixing approaches:
   - Search src for @supabase/auth-helpers-nextjs usage (ensure only @supabase/ssr is used)
 - [ ] Step 6: Run app flow + validate DevTools cookies exist and server logs show them
+
+# Feature: Student Dashboard + Attach File
+- [x] Add student “Dashboard” item in sidebar
+- [x] Student dashboard UI with Pending + Rejected sections
+- [x] (Implemented then) Removed search + filter on Student dashboard per latest request
+
+- [x] Add “Attach File” option (PNG/JPG/PDF, max 2MB) in Vehicle Reservation form
+
+# Feature: Dean approved request detail popup
+- [x] Replace “View” navigation with in-place popup (keeps user on same page)
+
+
+
