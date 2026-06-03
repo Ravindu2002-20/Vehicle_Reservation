@@ -24,6 +24,10 @@ const initialFormData = {
   special_notes: "",
 };
 
+const ACCEPTED_FILE_TYPES = ["image/png", "image/jpeg", "application/pdf"]; // PNG, JPG, PDF
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+
+
 export function VehicleReservationForm() {
   const { user } = useSession();
   const [formData, setFormData] = useState(initialFormData);
@@ -296,6 +300,35 @@ export function VehicleReservationForm() {
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Reset Form
                 </Button>
+
+                {/* Attachment picker (optional) */}
+                <label
+                  className="inline-flex items-center justify-center px-4 py-2 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 cursor-pointer transition-colors"
+                >
+                  Attach File
+                  <input
+                    type="file"
+                    accept={ACCEPTED_FILE_TYPES.join(",")}
+                    className="hidden"
+                    // NOTE: attaching is UI-only for now; backend currently saves JSON-only body.
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > MAX_FILE_SIZE_BYTES) {
+                        toast.error("File size must be under 2MB");
+                        e.target.value = "";
+                        return;
+                      }
+                      if (!ACCEPTED_FILE_TYPES.includes(file.type)) {
+                        toast.error("Only PNG, JPG, or PDF files are allowed");
+                        e.target.value = "";
+                        return;
+                      }
+                      toast.success("File selected successfully (not uploaded yet)");
+                    }}
+                  />
+                </label>
+
                 <Button
                   type="submit"
                   disabled={isSubmitting}
@@ -306,6 +339,7 @@ export function VehicleReservationForm() {
                 </Button>
               </div>
             </div>
+
           </form>
         </CardContent>
       </Card>

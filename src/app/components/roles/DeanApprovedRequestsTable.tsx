@@ -338,13 +338,14 @@ export function DeanApprovedRequestsTable() {
                             variant="outline"
                             className="text-orange-600 border-orange-500 hover:bg-orange-50"
                             onClick={() => {
-                              // keep existing navigation patterns minimal; open request detail if route exists
-                              window.location.href = `/requests/${r.id}`;
+                              // Show details in a pop-up (no navigation)
+                              alert(`Request #${r.id}\n\nStudent: ${r.requester?.full_name ?? "Unknown"}\nCreated: ${formatDate(r.created_at)}\nApproved: ${formatDate(r.approved_at ?? r.created_at)}\nStatus: ${r.approval_status}`);
                             }}
                           >
                             <Eye className="w-4 h-4 mr-1" />
                             View
                           </Button>
+
                         </td>
                       </tr>
                     );
