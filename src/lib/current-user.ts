@@ -59,16 +59,44 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     if (error || !user?.id || !user?.email) return null;
 
     const supabaseId = user.id;
+    const email = user.email;
 
-    // Supabase Auth is the ONLY identity source.
-    // Prisma lookup MUST be by supabase_id. No email-based authentication.
+    // Supabase Auth is the primary identity source.
+    // If no row exists by supabase_id, try to reconcile by email and fill supabase_id.
     let appUser = await prisma.user
       .findUnique({ where: { supabase_id: supabaseId } })
       .catch(() => null);
 
-    console.log("[getCurrentUser] prisma.user by supabase_id:", {
+    if (!appUser) {
+      appUser = await prisma.user
+        .findUnique({ where: { email } })
+        .catch(() => null);
+
+      if (appUser) {
+        if (appUser.supabase_id && appUser.supabase_id !== supabaseId) {
+          console.warn(
+            "[getCurrentUser] supabase_id mismatch for user email:",
+            email,
+            { expected: supabaseId, actual: appUser.supabase_id }
+          );
+          appUser = null;
+        } else if (!appUser.supabase_id) {
+          appUser = await prisma.user.update({
+            where: { id: appUser.id },
+            data: { supabase_id: supabaseId },
+          });
+          console.log(
+            "[getCurrentUser] linked existing Prisma user to Supabase auth user:",
+            { userId: appUser.id, email: appUser.email, supabaseId }
+          );
+        }
+      }
+    }
+
+    console.log("[getCurrentUser] prisma.user by supabase_id/email:", {
       found: !!appUser,
       supabaseId,
+      email,
     });
 
     if (appUser) {
@@ -89,15 +117,41 @@ export async function getCurrentUser(): Promise<CurrentUser> {
       };
     }
 
-    // Try admin: supabase_id first, then email
     let appAdmin = await prisma.admin
       .findUnique({ where: { supabase_id: supabaseId } })
       .catch(() => null);
-    console.log("[getCurrentUser] prisma.admin by supabase_id:", {
+
+    if (!appAdmin) {
+      appAdmin = await prisma.admin
+        .findUnique({ where: { email } })
+        .catch(() => null);
+
+      if (appAdmin) {
+        if (appAdmin.supabase_id && appAdmin.supabase_id !== supabaseId) {
+          console.warn(
+            "[getCurrentUser] supabase_id mismatch for admin email:",
+            email,
+            { expected: supabaseId, actual: appAdmin.supabase_id }
+          );
+          appAdmin = null;
+        } else if (!appAdmin.supabase_id) {
+          appAdmin = await prisma.admin.update({
+            where: { id: appAdmin.id },
+            data: { supabase_id: supabaseId },
+          });
+          console.log(
+            "[getCurrentUser] linked existing Prisma admin to Supabase auth user:",
+            { adminId: appAdmin.id, email: appAdmin.email, supabaseId }
+          );
+        }
+      }
+    }
+
+    console.log("[getCurrentUser] prisma.admin by supabase_id/email:", {
       found: !!appAdmin,
       supabaseId,
+      email,
     });
-
 
     if (appAdmin) {
       const role = (appAdmin.admin_role as UnifiedRoleType) ?? "admin-deputy";
@@ -117,7 +171,12 @@ export async function getCurrentUser(): Promise<CurrentUser> {
       };
     }
 
-    console.log("[getCurrentUser] no matching prisma user/admin found");
+    console.warn(
+      "[getCurrentUser] no matching Prisma user/admin found for Supabase user."
+    );
+    console.warn(
+      "[getCurrentUser] run npm run sync:supabase-auth or scripts/sync-users-to-supabase-auth.ts to reconcile existing users."
+    );
     return null;
   } catch (err) {
     console.log("[getCurrentUser] caught error:", err);

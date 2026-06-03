@@ -30,15 +30,26 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // IMPORTANT: This refreshes the auth session
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANT: This refreshes the auth session.
+  // If Supabase auth is unreachable due to a network glitch, we should allow the request
+  // to continue and let the API route handle auth instead of blocking here.
+  try {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-  console.log("[middleware] supabase.auth.getUser user:", {
-    email: user?.email,
-    id: user?.id,
-  });
+    if (error) {
+      console.warn("[middleware] supabase.auth.getUser error:", error);
+    }
+
+    console.log("[middleware] supabase.auth.getUser user:", {
+      email: user?.email,
+      id: user?.id,
+    });
+  } catch (error) {
+    console.warn("[middleware] supabase.auth.getUser failed, allowing request to proceed:", error);
+  }
 
   return supabaseResponse;
 }

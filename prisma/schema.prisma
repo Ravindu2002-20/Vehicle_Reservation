@@ -109,14 +109,64 @@ model VehicleRequest {
   approval_status    String   @default("pending")
   allocation_status  String   @default("pending")
   admin_remarks      String?
+  rejection_attachment_url String?
+  approver_type      String   @default("DEAN")
+  forwarded_to_general Boolean @default(false)
   trip_remarks       String?
   created_at         DateTime @default(now())
   approver           Admin?   @relation("RequestApprover", fields: [approved_by], references: [id])
   driver             Driver?  @relation(fields: [driver_id], references: [id])
   requester          User     @relation(fields: [requester_id], references: [id])
   vehicle            Vehicle? @relation(fields: [vehicle_id], references: [id])
+  approval_meta      ApprovalMeta?
 
   @@map("vehicle_request")
+}
+
+enum ApproverType {
+  DEAN
+  UDR
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED_BY_DEAN
+  APPROVED
+  REJECTED
+}
+
+// NOTE: Add additional approval workflow fields to support the approval module.
+model ApprovalMeta {
+  id                 Int      @id @default(autoincrement())
+  vehicle_request_id Int      @unique
+  approver_type      ApproverType @default(UDR)
+  status             RequestStatus @default(PENDING)
+  current_approver   String?  
+  rejection_reason   String?
+  history            Json?
+
+  vehicle_request    VehicleRequest @relation(fields: [vehicle_request_id], references: [id])
+
+  @@map("approval_meta")
+}
+
+model ApprovalRequest {
+  id               Int            @id @default(autoincrement())
+  user_id          Int
+  vehicleDetails   String
+  requestDate      DateTime       @default(now())
+  purpose          String
+  approverType     ApproverType   @default(UDR)
+  approved_by      Int?
+  status           RequestStatus  @default(PENDING)
+  currentApprover  String?
+  rejectionReason  String?
+  rejection_attachment_url String?
+  history          Json?
+
+  created_at       DateTime       @default(now())
+
+  @@map("approval_request")
 }
 
 model Message {

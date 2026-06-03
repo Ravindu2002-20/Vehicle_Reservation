@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clock, Award, CheckCircle2 } from "lucide-react";
 
-import { PendingApprovalsView } from "./PendingApprovalsView";
+import ApproverInbox from "./ApproverInbox";
 import { OngoingRequestsView } from "./OngoingRequestsView";
 
 import {
@@ -128,15 +128,14 @@ export function DeanDashboard({ currentPage }: { currentPage?: string }) {
 
 
 
-      {/* Pending Approvals */}
-      <div className="pt-4">
-        <PendingApprovalsView />
-      </div>
+      {/* Pending Approvals removed as requested */}
+
 
       {/* Ongoing Request */}
       <div className="pt-4">
-        <OngoingRequestsView />
+        <OngoingRequestsView stage="dean" />
       </div>
+
 
     </div>
   );

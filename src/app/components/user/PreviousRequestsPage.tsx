@@ -16,19 +16,14 @@ import {
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 
-import { getUserRequests } from "@/lib/api";
-
 interface VehicleRequest {
   id: number;
-  request_type: string;
-  vehicle_nature: string;
-  number_of_persons: number;
-  travel_date_from: string;
-  travel_date_to: string;
+  vehicleDetails: string;
+  requestDate: string;
   purpose: string;
-  places_to_visit: string | null;
-  approval_status: string;
-  created_at: string;
+  approverType: string;
+  status: string;
+  rejectionReason?: string | null;
 }
 
 export function PreviousRequestsPage() {
@@ -48,7 +43,8 @@ export function PreviousRequestsPage() {
 
   async function loadRequests() {
     setLoading(true);
-    const data = await getUserRequests();
+    const res = await fetch("/api/vehicle-requests?userId=me");
+    const data = await res.json().catch(() => null);
     if (data?.data) setRequests(data.data);
     setLoading(false);
   }
@@ -105,15 +101,15 @@ export function PreviousRequestsPage() {
   }
 
   const filteredRequests = requests.filter((req) => {
-    const s = (req.approval_status || "").toLowerCase();
+    const s = (req.status || "").toLowerCase();
     const matchesStatus = statusFilter === "all" ? true : s === statusFilter;
 
     const q = query.trim().toLowerCase();
     const matchesQuery = !q
       ? true
       : String(req.id).includes(q) ||
-        (req.request_type || "").toLowerCase().includes(q) ||
-        (req.vehicle_nature || "").toLowerCase().includes(q);
+        (req.vehicleDetails || "").toLowerCase().includes(q) ||
+        (req.purpose || "").toLowerCase().includes(q);
 
     return matchesStatus && matchesQuery;
   });
@@ -182,7 +178,7 @@ export function PreviousRequestsPage() {
 
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {req.request_type} • {req.vehicle_nature}
+                    {req.vehicleDetails}
                   </p>
                   <p className="text-xs text-gray-500">
                     Request #{req.id}
@@ -191,7 +187,7 @@ export function PreviousRequestsPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                {getStatusBadge(req.approval_status)}
+                {getStatusBadge(req.status)}
                 {isOpen ? (
                   <ChevronUp className="text-gray-500" />
                 ) : (
@@ -203,38 +199,19 @@ export function PreviousRequestsPage() {
             {/* DETAILS */}
             {isOpen && (
               <CardContent className="border-t bg-gray-50/50 p-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <MapPin className="w-4 h-4 text-gray-500" />
-                    <span>
-                      {req.places_to_visit || "Not specified"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Users className="w-4 h-4 text-gray-500" />
-                    <span>
-                      {req.number_of_persons} passengers
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    <span>
-                      {formatDate(req.travel_date_from)} →{" "}
-                      {formatDate(req.travel_date_to)}
-                    </span>
-                  </div>
+                <div className="pt-2">
+                  <p className="text-xs uppercase text-gray-500">Submitted</p>
+                  <p className="text-gray-800 font-medium">{new Date(req.requestDate).toLocaleString()}</p>
                 </div>
 
                 <div className="pt-2">
-                  <p className="text-xs uppercase text-gray-500">
-                    Purpose
-                  </p>
-                  <p className="text-gray-800 font-medium">
-                    {req.purpose}
-                  </p>
+                  <p className="text-xs uppercase text-gray-500">Purpose</p>
+                  <p className="text-gray-800 font-medium">{req.purpose}</p>
                 </div>
+
+                {req.status?.toUpperCase() === "REJECTED" && req.rejectionReason && (
+                  <div className="text-orange-600 mt-2">{req.rejectionReason}</div>
+                )}
 
                 {/* DELETE ONLY ACTION */}
                 <div className="flex justify-end pt-2">

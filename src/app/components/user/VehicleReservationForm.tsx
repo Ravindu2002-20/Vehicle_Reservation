@@ -37,6 +37,8 @@ export function VehicleReservationForm() {
     setFormData((previous) => ({ ...previous, [name]: value }));
   };
 
+  const [approverType, setApproverType] = useState("DEAN");
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -50,6 +52,7 @@ export function VehicleReservationForm() {
       formData.required_time_to,
       formData.purpose,
       formData.distance_type,
+      approverType,
     ];
 
     if (requiredFields.some((field) => !field)) {
@@ -58,16 +61,24 @@ export function VehicleReservationForm() {
     }
 
     setIsSubmitting(true);
+    const vehicleDetails = `${formData.vehicle_nature} • ${formData.number_of_persons} passengers`;
+    const reqPayload = {
+      vehicleDetails,
+      requestDate: new Date().toISOString(),
+      purpose: formData.purpose,
+      approver_type: approverType,
+    };
+
     const response = await fetch("/api/vehicle-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(reqPayload),
     });
-    const payload = await response.json().catch(() => null);
+    const resPayload = await response.json().catch(() => null);
     setIsSubmitting(false);
 
     if (!response.ok) {
-      toast.error(payload?.error ?? "Could not submit reservation request");
+      toast.error(resPayload?.error ?? "Could not submit reservation request");
       return;
     }
 
@@ -285,6 +296,21 @@ export function VehicleReservationForm() {
                     onChange={(event) => setField("special_notes", event.target.value)}
                     className="min-h-16 resize-none"
                   />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-xs font-semibold text-gray-700 uppercase">
+                    Send Request To <span className="text-red-600">*</span>
+                  </Label>
+                  <Select value={approverType} onValueChange={(v: string) => setApproverType(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DEAN">Dean</SelectItem>
+                      <SelectItem value="UDR">University Deputy Registrar</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

@@ -43,31 +43,39 @@ export async function POST(
     );
   }
 
-  // Update the request with rejection details
+  // Update the request to return to Dean
   await prisma.vehicleRequest.update({
     where: { id: requestId },
     data: {
-      approval_status: "rejected",
+      approval_status: "returned_to_dean",
       admin_remarks: reason,
       rejection_attachment_url: attachment_url ?? null,
+      forwarded_to_general: false,
     },
   });
 
-  // Create message to user with rejection notification
-  let messageText = reason;
-  if (attachment_url) {
-    messageText += `\n\nAttachment: ${attachment_url}`;
+  // Look up the Dean admin
+  const dean = await prisma.admin.findFirst({
+    where: { admin_role: "dean" },
+  });
+
+  if (dean) {
+    // Create message to Dean with return notification
+    let messageText = reason;
+    if (attachment_url) {
+      messageText += `\n\nAttachment: ${attachment_url}`;
+    }
+
+    await prisma.message.create({
+      data: {
+        sender_admin_id: admin.id,
+        receiver_admin_id: dean.id,
+        subject: subject,
+        message: messageText,
+        is_read: false,
+      },
+    });
   }
-
-  await prisma.message.create({
-    data: {
-      sender_admin_id: admin.id,
-      receiver_user_id: vehicleRequest.requester_id,
-      subject: subject,
-      message: messageText,
-      is_read: false,
-    },
-  });
 
   return NextResponse.json({ success: true }, { status: 200 });
 }

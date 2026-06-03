@@ -78,108 +78,163 @@
 ## 2) Project File Structure
 
 ```
-Vehicle-reservation-System/
-├── .env                          # Environment variables (NEVER commit)
+Vehicle_Reservation/
+├── .env                           # Environment variables (NEVER commit)
 ├── .gitignore
 ├── ATTRIBUTIONS.md
-├── markdown.md                   # ← This file (comprehensive documentation)
+├── backend.md
+├── markdown.md                    # ← This file (comprehensive documentation)
 ├── next-env.d.ts
-├── next.config.mjs               # Next.js configuration
-├── package.json                  # Dependencies & scripts
+├── next.config.mjs                # Next.js configuration
+├── package.json                   # Dependencies & scripts
 ├── pnpm-workspace.yaml
-├── postcss.config.cjs            # PostCSS / Tailwind config
+├── postcss.config.cjs             # PostCSS / Tailwind config
 ├── README.md
 ├── TODO.md
-├── tsconfig.json                 # TypeScript configuration
-│
-├── prisma/
-│   ├── schema.prisma             # Database schema (all models)
-│   ├── seed.ts                   # Database seed script
-│   └── migrations/               # Prisma migration files (auto-generated)
-│
-├── scripts/
-│   ├── check-auth.ts             # Diagnostics: check Supabase + Prisma connectivity
-│   ├── check-supabase-users.ts   # List all users in Supabase Auth
-│   └── sync-users-to-supabase-auth.ts  # Sync Prisma users → Supabase Auth
-│
-├── src/
-│   ├── middleware.ts             # Edge middleware: refresh Supabase session cookies
-│   │
-│   ├── lib/
-│   │   ├── prisma.ts             # Singleton Prisma client
-│   │   ├── session.ts            # Client-side React hook (useSession)
-│   │   ├── api.ts                # Legacy fetch helpers (getUserProfile, getUserRequests, etc.)
-│   │   ├── current-user.ts       # Core: resolve Supabase user → Prisma role
-│   │   │
-│   │   └── supabase/
-│   │       ├── client.ts         # Browser Supabase client (createBrowserClient)
-│   │       └── server.ts         # Server Supabase client (createServerClient + cookies)
-│   │
-│   └── app/
-│       ├── page.tsx              # Home page: auth check → redirect to dashboard or login
-│       ├── layout.tsx            # Root layout
-│       ├── globals.css           # Global styles / Tailwind imports
-│       │
-│       ├── LoginPage.tsx         # Login form component (signInWithPassword)
-│       ├── login/
-│       │   └── page.tsx          # Route: /login → renders LoginPage component
-│       │
-│       ├── dashboard/
-│       │   └── page.tsx          # Route: /dashboard → loads role → renders UniversityDashboard
-│       │
-│       ├── api/
-│       │   ├── auth/
-│       │   │   ├── me/route.ts       # GET → returns current user { id, email, role, type, department_id }
-│       │   │   └── logout/route.ts   # POST → supabase.auth.signOut()
-│       │   │
-│       │   ├── profile/
-│       │   │   └── route.ts          # GET profile, PATCH update profile (users only)
-│       │   │
-│       │   ├── stats/
-│       │   │   ├── route.ts          # GET aggregated stats (student/admin view)
-│       │   │   └── faculty/route.ts  # GET per-faculty stats (raw SQL queries)
-│       │   │
-│       │   ├── messages/
-│       │   │   └── inbox/route.ts    # GET messages for current user/admin
-│       │   │
-│       │   ├── vehicle-requests/
-│       │   │   ├── route.ts          # GET list, POST create
-│       │   │   ├── [id]/
-│       │   │   │   ├── approve/route.ts  # POST approve (admin only)
-│       │   │   │   └── reject/route.ts   # POST reject (admin only)
-│       │   │
-│       │   └── requests/
-│       │       └── [id]/
-│       │           └── route.ts      # GET single, DELETE (user only)
-│       │
-│       └── components/
-│           ├── UniversityDashboard.tsx    # Main dashboard layout + role router
-│           ├── UniversitySidebar.tsx      # Sidebar navigation
-│           ├── UniversityHeader.tsx       # Top header bar with profile dropdown
-│           ├── ui/                        # shadcn/ui components (button, card, input, etc.)
-│           ├── user/
-│           │   ├── StudentDashboard.tsx    # Student/lecturer page router
-│           │   ├── VehicleReservationForm.tsx  # Reservation form page
-│           │   ├── MessagesPage.tsx        # Student messages page
-│           │   ├── PreviousRequestsPage.tsx # Previous requests page
-│           │   ├── AccountDetailsPage.tsx   # Student account details page
-│           │   └── WelcomeBanner.tsx       # Welcome banner with stats cards
-│           └── roles/
-│               ├── AdminDeputyDashboard.tsx        # Admin Deputy (faculty-level) dashboard
-│               ├── UniversityDeputyDashboard.tsx   # University Deputy dashboard
-│               ├── DeanDashboard.tsx               # Dean dashboard
-│               ├── SeniorOfficerDashboard.tsx      # Senior Officer dashboard
-│               ├── AdminAccountDetailsPage.tsx     # Admin account details
-│               ├── AdminMessagesPage.tsx           # Admin messages page
-│               ├── PendingApprovalsView.tsx        # Pending approvals table
-│               ├── ApprovedRequestsView.tsx        # Approved requests view
-│               └── DeanApprovedRequestsTable.tsx   # Dean-specific approved requests
-│
+├── tsconfig.json                  # TypeScript configuration
 ├── guidelines/
 │   └── Guidelines.md
-│
-└── ../../.codex/
-    └── config.toml
+├── prisma/
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+│       ├── migration_lock.toml
+│       ├── 20260522075519_init/
+│       │   └── migration.sql
+│       ├── 20260601191913_add_supabase_id/
+│       │   └── migration.sql
+│       └── 20260602044903_supabase_auth_refactor/
+│           └── migration.sql
+├── scripts/
+│   ├── check-auth.ts
+│   ├── check-supabase-users.ts
+│   ├── ensure-test-users.ts
+│   └── sync-users-to-supabase-auth.ts
+└── src/
+    ├── middleware.ts
+    ├── lib/
+    │   ├── api.ts
+    │   ├── current-user.ts
+    │   ├── prisma.ts
+    │   ├── session.ts
+    │   └── supabase/
+    │       ├── client.ts
+    │       └── server.ts
+    └── app/
+        ├── globals.css
+        ├── layout.tsx
+        ├── page.tsx
+        ├── LoginPage.tsx
+        ├── login/
+        │   └── page.tsx
+        ├── dashboard/
+        │   └── page.tsx
+        ├── requests/
+        │   ├── page.tsx
+        │   ├── requestDetail.tsx
+        │   ├── requestsHistory.tsx
+        │   ├── types.ts
+        │   └── [id]/
+        │       └── page.tsx
+        ├── api/
+        │   ├── auth/
+        │   │   ├── me/
+        │   │   │   └── route.ts
+        │   │   └── logout/
+        │   │       └── route.ts
+        │   ├── availability/
+        │   │   └── drivers/
+        │   │       └── route.ts
+        │   ├── messages/
+        │   │   ├── inbox/
+        │   │   │   └── route.ts
+        │   │   └── send/
+        │   │       └── route.ts
+        │   ├── profile/
+        │   │   └── route.ts
+        │   ├── requests/
+        │   │   └── [id]/
+        │   │       └── route.ts
+        │   ├── schedule/
+        │   │   └── senior-officer/
+        │   │       └── route.ts
+        │   ├── stats/
+        │   │   ├── route.ts
+        │   │   ├── faculty/
+        │   │   │   └── route.ts
+        │   │   ├── senior-officer/
+        │   │   │   └── route.ts
+        │   │   └── senior-officer-pending/
+        │   │       └── route.ts
+        │   ├── vehicle-requests/
+        │   │   ├── route.ts
+        │   │   ├── [id]/
+        │   │   │   ├── page.tsx
+        │   │   │   ├── allocate/
+        │   │   │   │   └── route.ts
+        │   │   │   ├── approve/
+        │   │   │   │   └── route.ts
+        │   │   │   ├── reject/
+        │   │   │   │   └── route.ts
+        │   │   │   ├── letter/
+        │   │   │   │   ├── download/
+        │   │   │   │   │   └── route.ts
+        │   │   │   │   └── view/
+        │   │   │   │       └── route.ts
+            │       │   └── (senior-officer routes)
+
+        │   │   ├── senior-officer/
+        │   │   │   └── route.ts
+        │   │   ├── senior-officer-detail/
+        │   │   │   └── route.ts
+        │   │   └── senior-officer-pending/
+        │   │       └── route.ts
+        │   └── vehicles/
+        │       ├── route.ts
+        │       └── available/
+        │           └── route.ts
+        └── components/
+            ├── RoleRouter.tsx
+            ├── UniversityDashboard.tsx
+            ├── UniversityHeader.tsx
+            ├── UniversitySidebar.tsx
+            ├── figma/
+            │   └── ImageWithFallback.tsx
+            ├── roles/
+            │   ├── AdminAccountDetailsPage.tsx
+            │   ├── AdminDashboard.tsx
+            │   ├── AdminDeputyDashboard.tsx
+            │   ├── AdminMessagesPage.tsx
+            │   ├── ApprovedRequestsView.tsx
+            │   ├── DeanApprovedRequestsTable.tsx
+            │   ├── DeanDashboard.tsx
+            │   ├── FacultyDeputyApprovalsView.tsx
+            │   ├── FleetStatusView.tsx
+            │   ├── General DeputyDashboard.tsx
+            │   ├── OngoingRequestsView.tsx
+            │   ├── PendingApprovalsView.tsx
+            │   ├── SeniorOfficerDashboard.tsx
+            │   ├── UniversityDeputyDashboard.tsx
+            │   └── senior-officer/
+            │       ├── DriversPage.tsx
+            │       ├── MessagesPage.tsx
+            │       ├── RequestAllocationDetailPage.tsx
+            │       ├── SchedulePage.tsx
+            │       ├── SeniorOfficerDashboardPage.tsx
+            │       ├── SeniorOfficerLayout.tsx
+            │       ├── VehicleAllocationPage.tsx
+            │       ├── VehiclesPage.tsx
+            │       └── VehicleStatusPage.tsx
+            ├── ui/
+            │   ├── (many shadcn/ui component files: button, card, table, dialog, etc.)
+            │   └── utils.ts
+            └── user/
+                ├── AccountDetailsPage.tsx
+                ├── MessagesPage.tsx
+                ├── PreviousRequestsPage.tsx
+                ├── StudentDashboard.tsx
+                ├── VehicleReservationForm.tsx
+                └── WelcomeBanner.tsx
 ```
 
 ---
@@ -187,6 +242,7 @@ Vehicle-reservation-System/
 ## 3) Environment Variables
 
 **File: `.env`**
+
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://avfkqynaftjpczomidxc.supabase.co

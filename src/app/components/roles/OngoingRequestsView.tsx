@@ -9,17 +9,9 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "../ui/alert-dialog";
+import RejectDialog from "./RejectDialog";
+
+
 
 import { toast } from "sonner";
 import { useSession } from "@/lib/session";
@@ -46,7 +38,9 @@ function formatDate(dateStr: string) {
   });
 }
 
-export function OngoingRequestsView() {
+type OngoingRequestsStage = "dean" | "general-admin-dean-approved";
+
+export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) {
   const { user } = useSession();
 
   const [ongoingRequests, setOngoingRequests] = useState<OngoingRequest[]>([]);
@@ -57,16 +51,22 @@ export function OngoingRequestsView() {
   // This view provides a simple list + details.
 
   useEffect(() => {
+    if (stage === "general-admin-dean-approved") {
+      // For General Admin: show only requests already approved by Dean (backend enforces)
+    }
+
     let cancelled = false;
 
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/vehicle-requests?status=pending");
+
+        const inboxRole =
+          stage === "general-admin-dean-approved" ? "GENERAL_DEPUTY" : "DEAN";
+
+        const res = await fetch(`/api/vehicle-requests/inbox/${inboxRole}`);
         const payload = await res.json();
         if (cancelled) return;
-        // If your backend uses different status labels for "ongoing",
-        // adjust mapping here.
         setOngoingRequests(payload?.data ?? []);
       } catch (e) {
         console.error("Failed to fetch ongoing requests:", e);
@@ -79,7 +79,8 @@ export function OngoingRequestsView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [stage]);
+
 
   const summary = useMemo(() => ongoingRequests.length, [ongoingRequests]);
 
@@ -105,22 +106,9 @@ export function OngoingRequestsView() {
     }
   }
 
-  async function onReject(requestId: number) {
-    try {
-      const res = await fetch(`/api/vehicle-requests/${requestId}/reject`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast.error(data?.error || `Failed to reject request #${requestId}`);
-        return;
-      }
-      toast.success(`Request #${requestId} rejected`);
-      removeFromList(requestId);
-    } catch {
-      toast.error("An error occurred");
-    }
-  }
+  const onReject = async (requestId: number) => {
+    removeFromList(requestId);
+  };
 
   if (loading) {
     return (
@@ -211,42 +199,14 @@ export function OngoingRequestsView() {
                         Approve
                       </Button>
 
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            className="transition-all duration-200"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <X className="w-4 h-4 mr-1" />
-                            Reject
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Reject request #{req.id}?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will mark the request as rejected.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              className="bg-red-600 hover:bg-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onReject(req.id);
-                              }}
-                            >
-                              Reject
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <RejectDialog
+                        requestId={req.id}
+                        requesterName={req.requester?.full_name ?? "Unknown"}
+                        purpose={req.purpose}
+                        submitting={false}
+                        onReject={onReject}
+                        onNotify={(msg) => toast.success(msg)}
+                      />
 
                       <Button
                         onClick={(e) => {
@@ -269,4 +229,5 @@ export function OngoingRequestsView() {
     </div>
   );
 }
+
 

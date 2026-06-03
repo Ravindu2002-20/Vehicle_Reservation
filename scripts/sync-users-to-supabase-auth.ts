@@ -6,7 +6,30 @@
  *
  * Run: npx tsx scripts/sync-users-to-supabase-auth.ts
  */
+import fs from "fs";
+import path from "path";
 import { createClient } from "@supabase/supabase-js";
+
+// Load .env into process.env if present (avoid adding dotenv dependency)
+try {
+  const envPath = path.resolve(process.cwd(), ".env");
+  if (fs.existsSync(envPath)) {
+    const contents = fs.readFileSync(envPath, "utf8");
+    for (const line of contents.split(/\r?\n/)) {
+      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)?\s*$/);
+      if (!m) continue;
+      let [, key, val] = m;
+      if (!val) val = "";
+      // strip surrounding quotes
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = val;
+    }
+  }
+} catch (e) {
+  // ignore
+}
 import { PrismaClient } from "@prisma/client";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -18,6 +41,11 @@ if (!supabaseUrl || !supabaseServiceKey) {
   process.exit(1);
 }
 
+// Diagnostic: mask service key so user can verify it's loaded (no full secret printed)
+const masked = `${supabaseServiceKey.slice(0, 6)}...${supabaseServiceKey.slice(-6)}`;
+console.log(`Using SUPABASE_URL=${supabaseUrl}`);
+console.log(`Loaded SUPABASE_SERVICE_ROLE_KEY length=${supabaseServiceKey.length} masked=${masked}`);
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
     autoRefreshToken: false,
@@ -28,8 +56,18 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 const prisma = new PrismaClient();
 
 async function findSupabaseUser(email: string) {
-  const { data } = await supabase.auth.admin.listUsers();
-  return data?.users?.find((u: any) => u.email === email) || null;
+  const { data, error } = await supabase.auth.admin.listUsers({
+    page: 1,
+    perPage: 100,
+  });
+
+  if (error) {
+    throw new Error(`Supabase listUsers failed: ${error.message}`);
+  }
+
+  return (
+    data?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase()) || null
+  );
 }
 
 async function main() {

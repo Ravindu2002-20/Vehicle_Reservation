@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { Clock, Car, TrendingUp, Award } from "lucide-react";
 
-import { PendingApprovalsView } from "./PendingApprovalsView";
-
+import { OngoingRequestsView } from "./OngoingRequestsView";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 
@@ -132,12 +131,11 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
         </CardContent>
       </Card>
 
-      {/* Pending Approvals (Admin) */}
+      {/* Ongoing Request */}
       <div className="pt-4">
-        {/* Render only for admin-role users (handled in PendingApprovalsView via supabase session) */}
-        {/* Lazy UI: if user is null, view will still render and disable actions */}
-        <PendingApprovalsView />
+        <OngoingRequestsView />
       </div>
+
     </div>
 
   );
