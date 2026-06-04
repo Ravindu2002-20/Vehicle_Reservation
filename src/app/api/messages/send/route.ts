@@ -2,12 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const authUser = await getCurrentUser();
-
-    console.log("=== SEND MESSAGE API ===");
-    console.log("AUTH USER:", authUser);
 
     if (!authUser) {
       return NextResponse.json(
@@ -17,8 +16,6 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-
-    console.log("REQUEST BODY:", body);
 
     const email = body.email?.trim();
     const subject = body.subject?.trim() || null;
@@ -43,9 +40,6 @@ export async function POST(req: Request) {
     const adminRecipient = await prisma.admin.findUnique({
       where: { email },
     });
-
-    console.log("USER RECIPIENT:", userRecipient);
-    console.log("ADMIN RECIPIENT:", adminRecipient);
 
     if (!userRecipient && !adminRecipient) {
       return NextResponse.json(
@@ -77,8 +71,6 @@ export async function POST(req: Request) {
     if (adminRecipient) {
       data.receiver_admin_id = adminRecipient.id;
     }
-
-    console.log("MESSAGE DATA:", data);
 
     const result = await prisma.message.create({
       data,

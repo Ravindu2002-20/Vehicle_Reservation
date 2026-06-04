@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  console.log("[api/auth/me] start");
   const authUser = await getCurrentUser();
-  console.log("[api/auth/me] authUser:", authUser);
 
   if (!authUser) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
