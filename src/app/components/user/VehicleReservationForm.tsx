@@ -60,26 +60,10 @@ export function VehicleReservationForm() {
     }
 
     setIsSubmitting(true);
-    const path_type = approverType === "DEAN" ? "via_dean" : "skip_dean";
-
-    const response = await fetch("/api/requests", {
+    const response = await fetch("/api/vehicle-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path_type,
-        request_type: formData.request_type,
-        vehicle_nature: formData.vehicle_nature,
-        number_of_persons: formData.number_of_persons,
-        travel_date_from: formData.travel_date_from,
-        travel_date_to: formData.travel_date_to,
-        required_time_from: formData.required_time_from,
-        required_time_to: formData.required_time_to,
-        purpose: formData.purpose,
-        distance_type: formData.distance_type,
-        places_to_visit: formData.places_to_visit,
-        travel_route: formData.travel_route,
-        special_notes: formData.special_notes,
-      }),
+      body: JSON.stringify(formData),
     });
     const resPayload = await response.json().catch(() => null);
     setIsSubmitting(false);

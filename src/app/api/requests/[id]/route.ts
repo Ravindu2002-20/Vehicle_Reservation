@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 
+export const dynamic = "force-dynamic";
+
 function parseId(idParam: string) {
   const id = Number(idParam);
   if (!Number.isFinite(id) || id <= 0) return null;

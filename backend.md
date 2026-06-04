@@ -209,24 +209,19 @@ Dean can only view:
 approval_status = pending_dean
 ```
 
-**Backend enforcement**: **not working**
+### Restrictions
 
-- **not working (current code mismatch)**: Backend routes use `approval_status` values like `pending`, `approved_by_dean`, `approved`, and `returned_to_dean` rather than the spec’s `pending_dean`, `pending_admin_deputy`, `pending_university_deputy`, etc.
-- **not working (current code mismatch)**: Dean/faculty restriction is not enforced in the approval endpoints (no faculty ownership check).
+The following roles must NOT see these requests:
 
----
+* Admin Deputy
+* University Deputy Registrar
+* Senior Officer
 
-## Faculty Restriction
+Until dean approval occurs.
 
-**Backend enforcement**: **not working** (no faculty ownership restriction check exists in the current Dean/Admin approval/reject routes; approvals are role-based/admin-based but not faculty-matched)
+### Faculty Constraint
 
-Dean approval is only allowed when:
-
-```text
-Requester Faculty
-        ==
-Dean Faculty
-```
+The Dean reviewing the request must belong to the same faculty as the requester.
 
 Example:
 
@@ -742,14 +737,10 @@ Future enhancements must preserve:
 * Role-based visibility
 * PDF access controls
 * Approval chain integrity
+* Visibility restrictions
+* Audit history
+* Server-side enforcement
+* Faculty-based authorization
 
-All future workflow enhancements must extend this state machine and must never replace it.
-
----
-
-## Backend implementation notes (why some endpoints/rules may appear “not working”)
-
-Some sections of this specification are marked **not working** because the current backend routes under `/src/app/api/vehicle-requests/**` do not implement the exact same workflow/state values and/or authorization checks described in this document.
-
-Additionally, during documentation verification, some expected paths (ex: `src/app/api/vehicle-requests/letter/*`) could not be located in the current codebase (filesystem/tool listing returned no matching files). This means the PDF view/download rules in this spec cannot be confirmed against real endpoints at the time of this edit.
-
+```
+```

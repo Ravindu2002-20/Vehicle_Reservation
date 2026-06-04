@@ -10,6 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 
+import ApproverInbox from "./ApproverInbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
 import { Badge } from "../ui/badge";
 
@@ -107,6 +108,11 @@ export function AdminDeputyDashboard() {
         <p className="text-gray-600 mt-2">
           Manage faculty-level vehicle operations and requests
         </p>
+      </div>
+
+      {/* PENDING APPROVALS */}
+      <div className="pt-4">
+        <ApproverInbox role="GENERAL_DEPUTY" />
       </div>
 
       {/* FACULTY STATS */}
