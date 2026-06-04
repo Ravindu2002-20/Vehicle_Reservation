@@ -1,0 +1,58 @@
+# --- Dependencies ---
+node_modules/
+
+# --- Next.js ---
+.next/
+out/
+
+# --- Environment variables ---
+.env
+.env.*.local
+
+# --- Logs ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Coverage / tests ---
+coverage/
+*.lcov
+*.lcov.info
+.nyc_output/
+playwright-report/
+test-results/
+
+# --- Vercel ---
+.vercel/
+
+# --- Prisma (generated) ---
+# Keep committed schema/migrations, but ignore generated artifacts.
+prisma/client/
+
+# If you want to ignore local migration history/dev artifacts, uncomment:
+# prisma/migrations/**/
+# pr is optional; typically you should keep migration SQL committed.
+
+# --- OS / Editor ---
+.DS_Store
+Thumbs.db
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# --- Cache / build tools ---
+.pnpm-store/
+.turbo/
+.cache/
+
+# --- Misc ---
+# Ignore Next.js type-checking/build info
+*.tsbuildinfo
+
+# Ignore user uploads (if any). Add your specific folder name if needed.
+# uploads/
+
