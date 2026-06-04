@@ -38,8 +38,6 @@ export function VehicleReservationForm() {
 
   const [approverType, setApproverType] = useState("DEAN");
 
-  const [approverType, setApproverType] = useState("DEAN");
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -54,7 +52,6 @@ export function VehicleReservationForm() {
       formData.purpose,
       formData.distance_type,
       approverType,
-      approverType,
     ];
 
     if (requiredFields.some((field) => !field)) {
@@ -63,33 +60,15 @@ export function VehicleReservationForm() {
     }
 
     setIsSubmitting(true);
-    const path_type = approverType === "DEAN" ? "via_dean" : "skip_dean";
-
-    const response = await fetch("/api/requests", {
+    const response = await fetch("/api/vehicle-requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        path_type,
-        request_type: formData.request_type,
-        vehicle_nature: formData.vehicle_nature,
-        number_of_persons: formData.number_of_persons,
-        travel_date_from: formData.travel_date_from,
-        travel_date_to: formData.travel_date_to,
-        required_time_from: formData.required_time_from,
-        required_time_to: formData.required_time_to,
-        purpose: formData.purpose,
-        distance_type: formData.distance_type,
-        places_to_visit: formData.places_to_visit,
-        travel_route: formData.travel_route,
-        special_notes: formData.special_notes,
-      }),
+      body: JSON.stringify(formData),
     });
-    const resPayload = await response.json().catch(() => null);
     const resPayload = await response.json().catch(() => null);
     setIsSubmitting(false);
 
     if (!response.ok) {
-      toast.error(resPayload?.error ?? "Could not submit reservation request");
       toast.error(resPayload?.error ?? "Could not submit reservation request");
       return;
     }
@@ -308,21 +287,6 @@ export function VehicleReservationForm() {
                     onChange={(event) => setField("special_notes", event.target.value)}
                     className="min-h-16 resize-none"
                   />
-                </div>
-
-                <div className="space-y-1.5 md:col-span-2">
-                  <Label className="text-xs font-semibold text-gray-700 uppercase">
-                    Send Request To <span className="text-red-600">*</span>
-                  </Label>
-                  <Select value={approverType} onValueChange={(v: string) => setApproverType(v)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="DEAN">Dean</SelectItem>
-                      <SelectItem value="UDR">University Deputy Registrar</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">
