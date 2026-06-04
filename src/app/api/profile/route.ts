@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET /api/profile
 export async function GET() {
   const authUser = await getCurrentUser();

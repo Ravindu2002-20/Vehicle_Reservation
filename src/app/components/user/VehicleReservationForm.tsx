@@ -38,6 +38,8 @@ export function VehicleReservationForm() {
 
   const [approverType, setApproverType] = useState("DEAN");
 
+  const [approverType, setApproverType] = useState("DEAN");
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
@@ -51,6 +53,7 @@ export function VehicleReservationForm() {
       formData.required_time_to,
       formData.purpose,
       formData.distance_type,
+      approverType,
       approverType,
     ];
 
@@ -82,9 +85,11 @@ export function VehicleReservationForm() {
       }),
     });
     const resPayload = await response.json().catch(() => null);
+    const resPayload = await response.json().catch(() => null);
     setIsSubmitting(false);
 
     if (!response.ok) {
+      toast.error(resPayload?.error ?? "Could not submit reservation request");
       toast.error(resPayload?.error ?? "Could not submit reservation request");
       return;
     }
@@ -303,6 +308,21 @@ export function VehicleReservationForm() {
                     onChange={(event) => setField("special_notes", event.target.value)}
                     className="min-h-16 resize-none"
                   />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label className="text-xs font-semibold text-gray-700 uppercase">
+                    Send Request To <span className="text-red-600">*</span>
+                  </Label>
+                  <Select value={approverType} onValueChange={(v: string) => setApproverType(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DEAN">Dean</SelectItem>
+                      <SelectItem value="UDR">University Deputy Registrar</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1.5 md:col-span-2">

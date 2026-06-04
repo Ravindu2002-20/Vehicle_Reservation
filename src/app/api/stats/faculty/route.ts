@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 
+export const dynamic = "force-dynamic";
+
 /**
  * Faculty stats that avoids per-faculty N+1 queries and avoids loading large row sets into memory.
  *

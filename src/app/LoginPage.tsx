@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -23,6 +23,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+
+  const bgImages = ["/login.png", "/login_2.jpg", "/login_3.jpg"];
+  const [bgIndex, setBgIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBgIndex((current) => (current + 1) % bgImages.length);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [bgImages.length]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,22 +67,38 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-white to-gray-100 px-4">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4">
+      {bgImages.map((image, index) => (
+        <div
+          key={image}
+          className={`absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ${
+            index === bgIndex ? "opacity-100" : "opacity-0"
+          }`}
+          style={{ backgroundImage: `url(${image})` }}
+        />
+      ))}
+
+      <div className="absolute inset-0 bg-slate-950/25" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.12),transparent_36%),linear-gradient(90deg,rgba(15,23,42,0.38),rgba(15,23,42,0.12),rgba(15,23,42,0.38))]" />
+
       {/* Background glow */}
       <div className="absolute w-72 h-72 bg-orange-400/20 blur-3xl rounded-full top-10 left-10" />
       <div className="absolute w-72 h-72 bg-blue-400/10 blur-3xl rounded-full bottom-10 right-10" />
 
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-white/90 backdrop-blur-md">
+      <Card className="relative z-10 w-full max-w-md border border-white/25 bg-black/25 shadow-2xl shadow-black/35 backdrop-blur-2xl backdrop-saturate-150">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto bg-orange-100 p-3 rounded-xl w-fit">
-            <Car className="w-6 h-6 text-orange-600" />
+          <div className="mx-auto bg-white/15 p-3 rounded-xl w-fit">
+            <Car className="w-6 h-6 text-orange-300" />
           </div>
 
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            Vehicle Reservation
+          <CardTitle className="mx-auto max-w-sm text-center text-2xl font-bold leading-tight text-white">
+            Vehicle Reservation System
+            <span className="block text-lg font-semibold text-white/85">
+              Wayamba University Of Sri Lanka
+            </span>
           </CardTitle>
 
-          <CardDescription className="text-gray-500">
+          <CardDescription className="text-white/75">
             Sign in to access your dashboard
           </CardDescription>
         </CardHeader>
@@ -86,7 +114,7 @@ export default function LoginPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700">
+              <Label htmlFor="email" className="text-white/85">
                 Email
               </Label>
               <Input
@@ -95,14 +123,14 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="focus-visible:ring-orange-500"
+                className="border-white/25 bg-white/10 text-white placeholder:text-white/55 focus-visible:ring-orange-400"
                 required
               />
             </div>
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700">
+              <Label htmlFor="password" className="text-white/85">
                 Password
               </Label>
               <Input
@@ -111,7 +139,7 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="focus-visible:ring-orange-500"
+                className="border-white/25 bg-white/10 text-white placeholder:text-white/55 focus-visible:ring-orange-400"
                 required
               />
             </div>
@@ -134,7 +162,7 @@ export default function LoginPage() {
           </form>
 
           {/* Footer hint */}
-          <p className="text-xs text-center text-gray-400 mt-6">
+          <p className="text-xs text-center text-white/60 mt-6">
             Secure access for authorized users only
           </p>
         </CardContent>
