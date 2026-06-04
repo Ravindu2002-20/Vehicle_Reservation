@@ -8,7 +8,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const reason = body?.reason;
+  const reason = body?.rejection_reason ?? body?.reason;
   if (!reason) return NextResponse.json({ error: "Missing reason" }, { status: 400 });
 
   const id = Number(params.id);

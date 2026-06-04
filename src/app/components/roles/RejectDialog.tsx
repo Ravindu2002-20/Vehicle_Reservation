@@ -100,7 +100,7 @@ export default function RejectDialog({
         if (!uploadRes.ok) {
           throw new Error(uploadPayload?.error || "Failed to upload attachment");
         }
-        attachmentUrl = uploadPayload.url;
+        attachmentUrl = uploadPayload?.url ?? uploadPayload?.path ?? null;
       }
 
       const res = await fetch(`/api/vehicle-requests/${requestId}/reject`, {
@@ -108,6 +108,7 @@ export default function RejectDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: subject.trim(),
+          rejection_reason: reason.trim(),
           reason: reason.trim(),
           attachment_url: attachmentUrl,
         }),
@@ -242,4 +243,3 @@ export default function RejectDialog({
     </>
   );
 }
-

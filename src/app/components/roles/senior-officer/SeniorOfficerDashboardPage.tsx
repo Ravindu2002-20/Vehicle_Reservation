@@ -1,29 +1,38 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Car, Clock, FileText, TrendingUp, Users } from "lucide-react";
+
+import SeniorOfficerLayout from "./SeniorOfficerLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../ui/table";
-import { Calendar, FileCheck, FileText, Search } from "lucide-react";
-import SeniorOfficerLayout from "./SeniorOfficerLayout";
 
-type AllocationStatus = "allocated" | "pending" | "not-allocated";
+type StatCard = {
+  label: string;
+  value: number;
+  icon: typeof Car;
+  iconClass: string;
+  cardClass: string;
+  valueClass: string;
+  iconWrapClass: string;
+};
 
 type VehicleRequestRow = {
   id: string;
   travel_date_from?: string | Date | null;
   travel_date_to?: string | Date | null;
   approval_status?: string;
-  allocation_status?: AllocationStatus;
+  allocation_status?: string | null;
   vehicle_nature?: string | null;
   requester?: { full_name: string } | null;
   requester_name?: string | null;
   faculty?: { name?: string | null } | null;
-  destination?: string | null;
+  places_to_visit?: string | null;
   purpose?: string | null;
-  trip_type?: string | null;
+  distance_type?: string | null;
 };
 
 function formatDate(d?: string | Date | null) {
@@ -33,7 +42,25 @@ function formatDate(d?: string | Date | null) {
   return date.toLocaleDateString();
 }
 
-export default function SeniorOfficerDashboardPage() {
+function statusBadge(status?: string | null) {
+  const normalized = (status ?? "").toLowerCase();
+  if (normalized === "allocated") {
+    return <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">Allocated</Badge>;
+  }
+  if (normalized === "approved_for_allocation") {
+    return <Badge className="bg-amber-100 text-amber-800 border border-amber-200">Awaiting Allocation</Badge>;
+  }
+  if (normalized === "rejected") {
+    return <Badge className="bg-rose-100 text-rose-800 border border-rose-200">Rejected</Badge>;
+  }
+  return <Badge className="bg-gray-100 text-gray-800 border border-gray-200">{status ?? "-"}</Badge>;
+}
+
+export default function SeniorOfficerDashboardPage({
+  onSelectRequest,
+}: {
+  onSelectRequest: (id: string) => void;
+}) {
   const [stats, setStats] = useState({
     totalDrivers: 0,
     totalVehicles: 0,
@@ -47,14 +74,13 @@ export default function SeniorOfficerDashboardPage() {
 
   useEffect(() => {
     let mounted = true;
+
     async function run() {
       setLoading(true);
       try {
-        // Stats endpoint to be implemented in Step 4.
-        // For now, best-effort fetch; UI should not crash.
         const [sRes, rRes] = await Promise.all([
-          fetch("/api/stats?type=senior-officer"),
-          fetch("/api/vehicle-requests?type=senior-officer-pending-allocation"),
+          fetch("/api/stats/senior-officer"),
+          fetch("/api/vehicle-requests/senior-officer-pending"),
         ]);
 
         const sJson = sRes.ok ? await sRes.json() : null;
@@ -67,7 +93,7 @@ export default function SeniorOfficerDashboardPage() {
             totalDrivers: sJson.data.totalDrivers ?? 0,
             totalVehicles: sJson.data.totalVehicles ?? 0,
             newRequests: sJson.data.newRequestsAwaitingAllocation ?? 0,
-            ongoingTrips: sJson.data.ongoingTrips ?? 0,
+            ongoingTrips: sJson.data.ongoingAllocations ?? 0,
           });
         }
 
@@ -77,11 +103,14 @@ export default function SeniorOfficerDashboardPage() {
           setNewRequests(rJson);
         }
       } catch {
-        // swallow
+        if (mounted) {
+          setNewRequests([]);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     }
+
     run();
     return () => {
       mounted = false;
@@ -95,65 +124,98 @@ export default function SeniorOfficerDashboardPage() {
       const requester = r.requester?.full_name ?? r.requester_name ?? "";
       return (
         (r.id ?? "").toLowerCase().includes(q) ||
-        (requester ?? "").toLowerCase().includes(q) ||
-        (r.destination ?? "").toLowerCase().includes(q) ||
-        (r.purpose ?? "").toLowerCase().includes(q)
+        requester.toLowerCase().includes(q) ||
+        (r.places_to_visit ?? "").toLowerCase().includes(q) ||
+        (r.purpose ?? "").toLowerCase().includes(q) ||
+        (r.distance_type ?? "").toLowerCase().includes(q)
       );
     });
   }, [newRequests, search]);
 
+  const statCards: StatCard[] = [
+    {
+      label: "Total Vehicles",
+      value: stats.totalVehicles,
+      icon: Car,
+      iconClass: "text-orange-600",
+      cardClass: "border-t-orange-500 border-l-orange-500",
+      valueClass: "text-orange-600",
+      iconWrapClass: "bg-orange-100",
+    },
+    {
+      label: "Total Drivers",
+      value: stats.totalDrivers,
+      icon: Users,
+      iconClass: "text-amber-600",
+      cardClass: "border-t-amber-500 border-l-amber-500",
+      valueClass: "text-amber-600",
+      iconWrapClass: "bg-amber-100",
+    },
+    {
+      label: "Awaiting Allocation",
+      value: stats.newRequests,
+      icon: Clock,
+      iconClass: "text-rose-600",
+      cardClass: "border-t-rose-500 border-l-rose-500",
+      valueClass: "text-rose-600",
+      iconWrapClass: "bg-rose-100",
+    },
+    {
+      label: "Ongoing Trips",
+      value: stats.ongoingTrips,
+      icon: TrendingUp,
+      iconClass: "text-emerald-600",
+      cardClass: "border-t-emerald-500 border-l-emerald-500",
+      valueClass: "text-emerald-600",
+      iconWrapClass: "bg-emerald-100",
+    },
+  ];
+
   return (
     <SeniorOfficerLayout
       title="Senior Officer Dashboard"
-      subtitle="Allocate vehicles/drivers for approved-for-allocation requests and monitor ongoing trips."
+      subtitle="Allocate vehicles and drivers for approved requests, then monitor ongoing trips."
     >
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-600">Total Drivers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.totalDrivers}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-600">Total Vehicles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.totalVehicles}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-600">New Requests</CardTitle>
-            <CardDescription>Awaiting allocation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.newRequests}</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {statCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card
+              key={card.label}
+              className={`shadow-lg border-0 border-l-4 border-t-2 ${card.cardClass} rounded-xl hover:shadow-2xl hover:scale-[1.03] transition-all duration-300`}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">{card.label}</p>
+                    <p className={`text-3xl font-bold ${card.valueClass}`}>{card.value}</p>
+                  </div>
+                  <div className={`${card.iconWrapClass} p-3 rounded-full`}>
+                    <Icon className={`w-8 h-8 ${card.iconClass}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-t-2 border-t-orange-500 rounded-t-xl">
           <CardTitle className="flex items-center gap-2 text-orange-900">
-            <FileCheck className="w-5 h-5" />
+            <FileText className="w-5 h-5" />
             Approved Requests Awaiting Allocation
           </CardTitle>
-          <CardDescription>approval_status=approved_for_allocation & allocation_status=pending</CardDescription>
+          <CardDescription>Requests ready for vehicle allocation</CardDescription>
         </CardHeader>
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by request id, requester, destination, purpose..."
-                className="pl-10"
+                placeholder="Search by request id, requester, place, purpose..."
+                className="pl-4"
               />
             </div>
           </div>
@@ -189,7 +251,7 @@ export default function SeniorOfficerDashboardPage() {
                   filtered.map((r) => {
                     const requester = r.requester?.full_name ?? r.requester_name ?? "";
                     const facultyName = r.faculty?.name ?? "";
-                    const tripType = r.trip_type ?? "";
+                    const tripType = r.distance_type ?? "";
                     const allocationStatus = r.allocation_status ?? "pending";
 
                     return (
@@ -197,30 +259,20 @@ export default function SeniorOfficerDashboardPage() {
                         <TableCell className="font-medium text-orange-700">{r.id}</TableCell>
                         <TableCell>{requester || "-"}</TableCell>
                         <TableCell>{facultyName || "-"}</TableCell>
-                        <TableCell>{r.destination || "-"}</TableCell>
+                        <TableCell>{r.places_to_visit || "-"}</TableCell>
                         <TableCell>{tripType || "-"}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-gray-500" />
+                            <Clock className="w-4 h-4 text-gray-500" />
                             {formatDate(r.travel_date_from)}
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {allocationStatus === "allocated" ? (
-                            <Badge className="bg-blue-100 text-blue-800">Allocated</Badge>
-                          ) : (
-                            <Badge className="bg-amber-100 text-amber-800">Pending</Badge>
-                          )}
-                        </TableCell>
+                        <TableCell>{statusBadge(allocationStatus)}</TableCell>
                         <TableCell className="text-center">
                           <Button
                             size="sm"
                             className="bg-orange-600 hover:bg-orange-700 text-white"
-                            onClick={() => {
-                              // Integration done in Step 6 via dedicated page routing.
-                              // For now, keep button non-breaking.
-                              window.location.href = `/dashboard/senior-officer/allocations/${encodeURIComponent(r.id)}`;
-                            }}
+                            onClick={() => onSelectRequest(r.id)}
                           >
                             <FileText className="w-4 h-4 mr-1" />
                             View Request
@@ -236,27 +288,6 @@ export default function SeniorOfficerDashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-600">Ongoing Trips</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-gray-900">{stats.ongoingTrips}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base text-gray-600">Tip</CardTitle>
-          </CardHeader>
-          <CardContent className="text-gray-600">
-            Use the <span className="font-semibold text-gray-900">Vehicle Allocation</span> page to allocate
-            vehicles and drivers. The schedule page will display allocations once Step 4 APIs are implemented.
-          </CardContent>
-        </Card>
-      </div>
     </SeniorOfficerLayout>
   );
 }
-

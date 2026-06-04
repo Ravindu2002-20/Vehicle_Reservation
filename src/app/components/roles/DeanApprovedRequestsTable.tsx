@@ -31,6 +31,12 @@ type ApprovedRequestRow = {
   approved_at?: string | null;
   approval_status: string;
   allocation_status?: string | null;
+  purpose?: string | null;
+  vehicle_nature?: string | null;
+  distance_type?: string | null;
+  travel_date_from?: string | null;
+  travel_date_to?: string | null;
+  request_letter_path?: string | null;
 };
 
 type RequestStatus = "Ongoing" | "Completed" | "Canceled by user";
@@ -94,6 +100,7 @@ export function DeanApprovedRequestsTable() {
 
   const [sortKey, setSortKey] = useState<SortKey>("requestDate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [selectedRequest, setSelectedRequest] = useState<ApprovedRequestRow | null>(null);
 
   const [page, setPage] = useState(1);
   const pageSize = 5;
@@ -103,7 +110,9 @@ export function DeanApprovedRequestsTable() {
     (async () => {
       try {
         setLoading(true);
-        const res = await fetch("/api/vehicle-requests?status=approved");
+        const res = await fetch(
+          "/api/vehicle-requests?status=pending_admin_deputy,pending_university_deputy,approved_for_allocation,allocated,rejected"
+        );
         const payload = await res.json();
         if (cancelled) return;
         setRowsRaw((payload?.data ?? []) as ApprovedRequestRow[]);
@@ -338,8 +347,7 @@ export function DeanApprovedRequestsTable() {
                             variant="outline"
                             className="text-orange-600 border-orange-500 hover:bg-orange-50"
                             onClick={() => {
-                              // Show details in a pop-up (no navigation)
-                              alert(`Request #${r.id}\n\nStudent: ${r.requester?.full_name ?? "Unknown"}\nCreated: ${formatDate(r.created_at)}\nApproved: ${formatDate(r.approved_at ?? r.created_at)}\nStatus: ${r.approval_status}`);
+                              setSelectedRequest(r);
                             }}
                           >
                             <Eye className="w-4 h-4 mr-1" />
@@ -387,9 +395,58 @@ export function DeanApprovedRequestsTable() {
               </div>
             </div>
           ) : null}
+
+          {selectedRequest ? (
+            <div className="p-5 border-t bg-white">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">REQ-{selectedRequest.id}</h3>
+                  <p className="text-sm text-gray-600">{selectedRequest.requester?.full_name ?? "Unknown"}</p>
+                </div>
+                <Button variant="ghost" onClick={() => setSelectedRequest(null)}>
+                  Close
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <div className="text-gray-500">Purpose</div>
+                  <div className="font-medium text-gray-900">{selectedRequest.purpose ?? "-"}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Vehicle Nature</div>
+                  <div className="font-medium text-gray-900">{selectedRequest.vehicle_nature ?? "-"}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Trip Type</div>
+                  <div className="font-medium text-gray-900">{selectedRequest.distance_type ?? "-"}</div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Travel Dates</div>
+                  <div className="font-medium text-gray-900">
+                    {formatDate(selectedRequest.travel_date_from)} to {formatDate(selectedRequest.travel_date_to)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-500">Uploaded Letter</div>
+                  {selectedRequest.request_letter_path ? (
+                    <a
+                      href={`/api/vehicle-requests/${selectedRequest.id}/letter/view`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-orange-600 underline underline-offset-4 hover:text-orange-700"
+                    >
+                      Open PDF in browser
+                    </a>
+                  ) : (
+                    <div className="font-medium text-gray-900">No attachment</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>
   );
 }
-

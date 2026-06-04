@@ -10,12 +10,12 @@ import { Search } from "lucide-react";
 
 type Row = {
   id: string;
-  destination?: string | null;
+  places_to_visit?: string | null;
   requester?: { full_name: string } | null;
   travel_date_from?: string | Date | null;
   allocation_status?: string;
   approval_status?: string;
-  trip_type?: string | null;
+  distance_type?: string | null;
 };
 
 function formatDate(d?: string | Date | null) {
@@ -25,26 +25,32 @@ function formatDate(d?: string | Date | null) {
   return date.toLocaleDateString();
 }
 
-export default function VehicleAllocationPage() {
+export default function VehicleAllocationPage({
+  onSelectRequest,
+}: {
+  onSelectRequest: (id: string) => void;
+}) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
     let mounted = true;
+
     async function run() {
       setLoading(true);
       try {
-        const res = await fetch("/api/vehicle-requests?type=senior-officer-pending-allocation");
+        const res = await fetch("/api/vehicle-requests/senior-officer-pending");
         const json = res.ok ? await res.json() : null;
         const data = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
         if (mounted) setRows(data);
       } catch {
-        // swallow
+        if (mounted) setRows([]);
       } finally {
         if (mounted) setLoading(false);
       }
     }
+
     run();
     return () => {
       mounted = false;
@@ -58,9 +64,9 @@ export default function VehicleAllocationPage() {
       const requester = r.requester?.full_name ?? "";
       return (
         (r.id ?? "").toLowerCase().includes(q) ||
-        (requester ?? "").toLowerCase().includes(q) ||
-        (r.destination ?? "").toLowerCase().includes(q) ||
-        (r.trip_type ?? "").toLowerCase().includes(q)
+        requester.toLowerCase().includes(q) ||
+        (r.places_to_visit ?? "").toLowerCase().includes(q) ||
+        (r.distance_type ?? "").toLowerCase().includes(q)
       );
     });
   }, [rows, search]);
@@ -73,7 +79,7 @@ export default function VehicleAllocationPage() {
       <Card className="shadow-lg">
         <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-t-2 border-t-orange-500 rounded-t-xl">
           <CardTitle className="flex items-center gap-2 text-orange-900">Pending Requests</CardTitle>
-          <CardDescription>approval_status=approved_for_allocation & allocation_status=pending</CardDescription>
+          <CardDescription>Requests awaiting allocation</CardDescription>
         </CardHeader>
         <CardContent className="p-4">
           <div className="relative">
@@ -87,7 +93,7 @@ export default function VehicleAllocationPage() {
                 <TableRow>
                   <TableHead>Request ID</TableHead>
                   <TableHead>Requester</TableHead>
-                  <TableHead>Destination</TableHead>
+                  <TableHead>Places to Visit</TableHead>
                   <TableHead>Trip Type</TableHead>
                   <TableHead>Travel Date</TableHead>
                   <TableHead className="text-center">Action</TableHead>
@@ -111,16 +117,14 @@ export default function VehicleAllocationPage() {
                     <TableRow key={r.id}>
                       <TableCell className="font-medium text-orange-700">{r.id}</TableCell>
                       <TableCell>{r.requester?.full_name ?? "-"}</TableCell>
-                      <TableCell>{r.destination ?? "-"}</TableCell>
-                      <TableCell>{r.trip_type ?? "-"}</TableCell>
+                      <TableCell>{r.places_to_visit ?? "-"}</TableCell>
+                      <TableCell>{r.distance_type ?? "-"}</TableCell>
                       <TableCell>{formatDate(r.travel_date_from)}</TableCell>
                       <TableCell className="text-center">
                         <Button
                           size="sm"
                           className="bg-orange-600 hover:bg-orange-700 text-white"
-                          onClick={() => {
-                            window.location.href = `/dashboard/senior-officer/allocations/${encodeURIComponent(r.id)}`;
-                          }}
+                          onClick={() => onSelectRequest(r.id)}
                         >
                           Allocate
                         </Button>
@@ -136,4 +140,3 @@ export default function VehicleAllocationPage() {
     </SeniorOfficerLayout>
   );
 }
-

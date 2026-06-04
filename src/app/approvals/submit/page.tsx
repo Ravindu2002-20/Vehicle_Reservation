@@ -31,7 +31,7 @@ export default function SubmitRequestPage() {
           required_time_from: "09:00",
           required_time_to: "17:00",
           purpose,
-          distance_type: "local",
+          distance_type: "short",
           places_to_visit: vehicleDetails,
           travel_route: vehicleDetails,
         }),

@@ -10,7 +10,6 @@ import { Button } from "../ui/button";
 import RejectDialog from "./RejectDialog";
 
 import { toast } from "sonner";
-import { useSession } from "@/lib/session";
 
 type OngoingRequest = {
   id: number;
@@ -20,13 +19,16 @@ type OngoingRequest = {
   travel_date_from: string;
   travel_date_to: string;
   places_to_visit?: string | null;
+  travel_route?: string | null;
+  distance_type?: string | null;
   purpose: string;
   created_at: string;
+  request_letter_path?: string | null;
 };
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "—";
+  if (Number.isNaN(d.getTime())) return "N/A";
   return d.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -36,16 +38,14 @@ function formatDate(dateStr: string) {
 
 // Maps each stage to the inbox role string expected by /api/vehicle-requests/inbox/[role]
 const STAGE_TO_INBOX_ROLE: Record<OngoingRequestsStage, string> = {
-  "dean":                "dean",
-  "admin-deputy":        "admin-deputy",
-  "university-deputy":   "university-deputy",
+  dean: "dean",
+  "admin-deputy": "admin-deputy",
+  "university-deputy": "university-deputy",
 };
 
 export type OngoingRequestsStage = "dean" | "admin-deputy" | "university-deputy";
 
 export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) {
-  const { user } = useSession();
-
   const [ongoingRequests, setOngoingRequests] = useState<OngoingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -124,9 +124,7 @@ export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) 
 
       {ongoingRequests.length === 0 ? (
         <Card className="shadow-lg border-0">
-          <CardContent className="p-8 text-center text-gray-500">
-            No ongoing requests
-          </CardContent>
+          <CardContent className="p-8 text-center text-gray-500">No ongoing requests</CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
@@ -137,7 +135,7 @@ export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) 
               <Card
                 key={req.id}
                 className={`border transition-all duration-200 cursor-pointer hover:shadow-lg hover:-translate-y-[1px] ${
-                  isOpen ? "border-amber-300" : "border-gray-200"
+                  isOpen ? "border-amber-400 bg-amber-50 shadow-md" : "border-gray-200 bg-white"
                 }`}
               >
                 <div
@@ -146,18 +144,14 @@ export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) 
                 >
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 truncate">REQ-{req.id}</p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {req.requester?.full_name ?? "Unknown"}
-                    </p>
+                    <p className="text-sm text-gray-500 truncate">{req.requester?.full_name ?? "Unknown"}</p>
                   </div>
 
-                  <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
-                    pending
-                  </Badge>
+                  <Badge className="bg-amber-100 text-amber-800 border border-amber-200">pending</Badge>
                 </div>
 
                 {isOpen && (
-                  <CardContent className="border-t bg-gray-50/50 p-4 space-y-4">
+                  <CardContent className="border-t bg-white p-4 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="flex items-center gap-2 text-gray-700">
                         <span>{req.vehicle_nature}</span>
@@ -167,14 +161,47 @@ export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) 
                       </div>
                       <div className="flex items-center gap-2 text-gray-700">
                         <span>
-                          {formatDate(req.travel_date_from)} → {formatDate(req.travel_date_to)}
+                          {formatDate(req.travel_date_from)}{" -> "}{formatDate(req.travel_date_to)}
                         </span>
                       </div>
                     </div>
 
-                    <div>
-                      <p className="text-xs uppercase text-gray-500">Purpose</p>
-                      <p className="text-gray-800 font-medium">{req.purpose}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Purpose</p>
+                        <p className="text-gray-800 font-medium">{req.purpose}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Trip Type</p>
+                        <p className="text-gray-800 font-medium">{req.distance_type ?? "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Route</p>
+                        <p className="text-gray-800 font-medium">{req.travel_route ?? "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Destination</p>
+                        <p className="text-gray-800 font-medium">{req.places_to_visit ?? "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Submitted</p>
+                        <p className="text-gray-800 font-medium">{formatDate(req.created_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase text-gray-500">Uploaded Letter</p>
+                        {req.request_letter_path ? (
+                          <a
+                            href={`/api/vehicle-requests/${req.id}/letter/view`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-orange-600 underline underline-offset-4 hover:text-orange-700"
+                          >
+                            Open PDF in browser
+                          </a>
+                        ) : (
+                          <p className="font-medium text-gray-900">No attachment</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2">

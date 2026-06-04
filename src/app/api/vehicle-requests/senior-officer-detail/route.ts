@@ -17,7 +17,19 @@ export async function GET(req: Request) {
 
     const request = await prisma.vehicleRequest.findUnique({
       where: { id: requestId },
-      include: {
+      select: {
+        id: true,
+        approval_status: true,
+        allocation_status: true,
+        request_letter_path: true,
+        purpose: true,
+        places_to_visit: true,
+        travel_route: true,
+        travel_date_from: true,
+        travel_date_to: true,
+        number_of_persons: true,
+        distance_type: true,
+        vehicle_nature: true,
         requester: {
           select: {
             id: true,
@@ -41,4 +53,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: 500, error: "Failed" }, { status: 500 });
   }
 }
-

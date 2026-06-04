@@ -54,5 +54,5 @@ Thumbs.db
 *.tsbuildinfo
 
 # Ignore user uploads (if any). Add your specific folder name if needed.
-# uploads/
+uploads/
 

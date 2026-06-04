@@ -107,6 +107,9 @@ export async function GET(req: Request) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const statusParam = searchParams.get("status");
+
   const statusByRole: Record<string, string> = {
     dean: "pending_dean",
     "admin-deputy": "pending_admin_deputy",
@@ -114,21 +117,32 @@ export async function GET(req: Request) {
     "senior-officer": "approved_for_allocation",
   };
 
-  const visibleStatus = statusByRole[currentUser.role];
+  let where: any = {};
 
-  const where: any = visibleStatus
-    ? { approval_status: visibleStatus }
-    : { requester_id: currentUser.id };
+  if (statusParam) {
+    const statuses = statusParam
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-  if (currentUser.role === "dean") {
-    const dean = await prisma.admin.findUnique({ where: { id: currentUser.id } });
-    if (dean?.faculty_id == null) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    where.approval_status = { in: statuses };
+    if (currentUser.type === "user") {
+      where.requester_id = currentUser.id;
     }
+  } else {
+    const visibleStatus = statusByRole[currentUser.role];
+    where = visibleStatus ? { approval_status: visibleStatus } : { requester_id: currentUser.id };
 
-    where.requester = {
-      department: { faculty_id: dean.faculty_id },
-    };
+    if (currentUser.role === "dean") {
+      const dean = await prisma.admin.findUnique({ where: { id: currentUser.id } });
+      if (dean?.faculty_id == null) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      where.requester = {
+        department: { faculty_id: dean.faculty_id },
+      };
+    }
   }
 
   const items = await prisma.vehicleRequest.findMany({

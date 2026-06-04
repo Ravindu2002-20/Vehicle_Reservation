@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Car, TrendingUp, Award } from "lucide-react";
+import { Clock, CheckCircle2, TrendingUp, Award } from "lucide-react";
 
 import { OngoingRequestsView } from "./OngoingRequestsView";
 
@@ -15,6 +15,8 @@ type FacultyStat = {
 };
 
 export function UniversityDeputyDashboard({ currentPage }: { currentPage?: string }) {
+  const [approvals, setApprovals] = useState<number>(0);
+  const [approvedThisMonth, setApprovedThisMonth] = useState<number>(0);
   const [pendingRequests, setPendingRequests] = useState<number>(0);
   const [facultyStats, setFacultyStats] = useState<FacultyStat[]>([]);
 
@@ -23,8 +25,12 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
       try {
         const res = await fetch("/api/stats?type=admin");
         const payload = await res.json();
+        setApprovals(payload?.data?.approvedToday ?? 0);
+        setApprovedThisMonth(payload?.data?.approvedThisMonth ?? 0);
         setPendingRequests(payload?.data?.pendingApprovals ?? 0);
       } catch {
+        setApprovals(0);
+        setApprovedThisMonth(0);
         setPendingRequests(0);
       }
     }
@@ -50,28 +56,27 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
         <p className="text-gray-600 mt-2">University-wide vehicle management and oversight</p>
       </div>
 
-      {/* University-Wide Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="shadow-lg border-0 border-l-4 border-t-2 border-t-orange-500 border-l-orange-500 rounded-xl hover:shadow-2xl hover:scale-[1.03] hover:brightness-105 transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Active Today</p>
-                <p className="text-3xl font-bold text-orange-600">12</p>
+                <p className="text-sm text-gray-600 mb-1">Approvals</p>
+                <p className="text-3xl font-bold text-orange-600">{approvals}</p>
               </div>
               <div className="bg-orange-100 p-3 rounded-full">
-                <Car className="w-8 h-8 text-orange-600" />
+                <CheckCircle2 className="w-8 h-8 text-orange-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-0 border-l-4 border-t-2 border-t-orange-500 border-l-amber-500 rounded-xl hover:shadow-2xl hover:scale-[1.03] hover:brightness-105 transition-all duration-300">
+        <Card className="shadow-lg border-0 border-l-4 border-t-2 border-t-amber-500 border-l-amber-500 rounded-xl hover:shadow-2xl hover:scale-[1.03] hover:brightness-105 transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Monthly Requests</p>
-                <p className="text-3xl font-bold text-amber-600">284</p>
+                <p className="text-sm text-gray-600 mb-1">Monthly Approvals</p>
+                <p className="text-3xl font-bold text-amber-600">{approvedThisMonth}</p>
               </div>
               <div className="bg-amber-100 p-3 rounded-full">
                 <TrendingUp className="w-8 h-8 text-amber-600" />
@@ -80,7 +85,7 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-0 border-l-4 border-t-2 border-t-orange-500 border-l-rose-500 rounded-xl hover:shadow-2xl hover:scale-[1.03] hover:brightness-105 transition-all duration-300">
+        <Card className="shadow-lg border-0 border-l-4 border-t-2 border-t-rose-500 border-l-rose-500 rounded-xl hover:shadow-2xl hover:scale-[1.03] hover:brightness-105 transition-all duration-300">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -95,7 +100,6 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
         </Card>
       </div>
 
-      {/* Faculty Performance */}
       <Card className="shadow-lg border-0 rounded-xl hover:shadow-xl transition-shadow duration-300">
         <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-t-2 border-t-orange-500 rounded-t-xl">
           <CardTitle className="flex items-center gap-2 text-orange-900">
@@ -128,10 +132,10 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
         </CardContent>
       </Card>
 
-      {/* Ongoing Requests */}
       <div className="pt-4">
         <OngoingRequestsView stage="university-deputy" />
       </div>
     </div>
   );
 }
+

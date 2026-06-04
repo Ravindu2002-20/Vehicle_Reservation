@@ -43,5 +43,5 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await file.arrayBuffer());
   await fs.writeFile(filePath, buffer);
 
-  return NextResponse.json({ path: storedPath }, { status: 201 });
+  return NextResponse.json({ path: storedPath, url: storedPath }, { status: 201 });
 }

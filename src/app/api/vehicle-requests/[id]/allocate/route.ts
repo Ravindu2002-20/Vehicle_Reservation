@@ -41,15 +41,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     // Validate vehicle availability
     const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
-    if (!vehicle || vehicle.availability_status !== "Available") {
+    if (!vehicle || vehicle.availability_status.toLowerCase() !== "available") {
       return NextResponse.json({ error: "Vehicle is not available" }, { status: 400 });
+    }
+
+    const vehicleConflict = await prisma.vehicleRequest.findFirst({
+      where: {
+        allocation_status: "allocated",
+        vehicle_id: vehicleId,
+      },
+      select: { id: true },
+    });
+    if (vehicleConflict) {
+      return NextResponse.json({ error: "Vehicle already allocated" }, { status: 409 });
     }
 
     // Validate primary driver availability
     const primaryDriver = await prisma.driver.findUnique({ where: { id: primaryDriverId as number } });
     if (
       !primaryDriver ||
-      (primaryDriver.availability_status !== "available" && primaryDriver.availability_status !== "Available")
+      primaryDriver.availability_status.toLowerCase() !== "available"
     ) {
       return NextResponse.json({ error: "Primary driver is not available" }, { status: 400 });
     }
@@ -67,7 +78,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     // Long trip: require secondary driver
-    if (request.vehicle_nature === "long") {
+    if (request.distance_type.toLowerCase() === "long") {
       if (!secondaryDriverId || !Number.isFinite(secondaryDriverId)) {
         return NextResponse.json({ error: "secondaryDriverId is required for long trips" }, { status: 400 });
       }
@@ -77,7 +88,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       const secondaryDriver = await prisma.driver.findUnique({ where: { id: secondaryDriverId } });
       if (
         !secondaryDriver ||
-        (secondaryDriver.availability_status !== "available" && secondaryDriver.availability_status !== "Available")
+        secondaryDriver.availability_status.toLowerCase() !== "available"
       ) {
         return NextResponse.json({ error: "Secondary driver is not available" }, { status: 400 });
       }

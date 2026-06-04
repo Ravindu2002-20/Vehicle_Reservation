@@ -6,7 +6,6 @@ import { StudentDashboard } from "./user/StudentDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
 import { DeanDashboard } from "./roles/DeanDashboard";
-import { SeniorOfficerDashboard } from "./roles/SeniorOfficerDashboard";
 import SeniorOfficerDashboardPage from "./roles/senior-officer/SeniorOfficerDashboardPage";
 import VehicleAllocationPage from "./roles/senior-officer/VehicleAllocationPage";
 import RequestAllocationDetailPage from "./roles/senior-officer/RequestAllocationDetailPage";
@@ -76,6 +75,7 @@ interface UniversityDashboardProps {
 
 
 export function UniversityDashboard({ role }: UniversityDashboardProps) {
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<StudentPage | SeniorOfficerPage>(
     role === "student" || role === "lecturer"
       ? "reservation-form"
@@ -96,14 +96,34 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
   const renderAdminContent = () => {
     // Senior Officer pages (fully isolated)
     if (role === "senior-officer" && effectiveSeniorOfficerPage) {
-      if (effectiveSeniorOfficerPage === "senior-dashboard") return <SeniorOfficerDashboardPage />;
-      if (effectiveSeniorOfficerPage === "vehicle-allocation") return <VehicleAllocationPage />;
+      if (effectiveSeniorOfficerPage === "senior-dashboard") {
+        return selectedRequestId ? (
+          <RequestAllocationDetailPage
+            requestId={selectedRequestId}
+            onAllocated={() => setSelectedRequestId(null)}
+            onCancel={() => setSelectedRequestId(null)}
+          />
+        ) : (
+          <SeniorOfficerDashboardPage onSelectRequest={setSelectedRequestId} />
+        );
+      }
+      if (effectiveSeniorOfficerPage === "vehicle-allocation") {
+        return selectedRequestId ? (
+          <RequestAllocationDetailPage
+            requestId={selectedRequestId}
+            onAllocated={() => setSelectedRequestId(null)}
+            onCancel={() => setSelectedRequestId(null)}
+          />
+        ) : (
+          <VehicleAllocationPage onSelectRequest={setSelectedRequestId} />
+        );
+      }
       if (effectiveSeniorOfficerPage === "schedule") return <SchedulePage />;
       if (effectiveSeniorOfficerPage === "vehicle-status") return <VehicleStatusPage />;
       if (effectiveSeniorOfficerPage === "drivers") return <DriversPage />;
       if (effectiveSeniorOfficerPage === "vehicles") return <VehiclesPage />;
       if (effectiveSeniorOfficerPage === "messages") return <MessagesPage />;
-      return <SeniorOfficerDashboardPage />;
+      return <SeniorOfficerDashboardPage onSelectRequest={setSelectedRequestId} />;
     }
 
 

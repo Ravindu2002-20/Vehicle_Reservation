@@ -91,7 +91,11 @@ export async function getInboxForRole(role: string) {
 
   return prisma.vehicleRequest.findMany({
     where: { approval_status: status },
-    include: { requester: true },
+    include: {
+      requester: true,
+      vehicle: true,
+      driver: true,
+    },
     orderBy: { created_at: "desc" },
   });
 }

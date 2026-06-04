@@ -14,11 +14,23 @@ export async function GET() {
       return NextResponse.json({ status: 403, error: "Forbidden" }, { status: 403 });
     }
 
-    // Availability filtering: availability_status=Available and NOT allocated/under repair/inactive.
-    // Schema: we approximate by matching availability_status.
+    const allocatedVehicleIds = (
+      await prisma.vehicleRequest.findMany({
+        where: {
+          allocation_status: "allocated",
+          approval_status: "approved_for_allocation",
+          vehicle_id: { not: null },
+        },
+        select: { vehicle_id: true },
+      })
+    )
+      .map((request) => request.vehicle_id)
+      .filter((id): id is number => typeof id === "number");
+
     const vehicles = await prisma.vehicle.findMany({
       where: {
         availability_status: { in: ["Available", "available"] },
+        id: { notIn: allocatedVehicleIds },
       },
       select: {
         id: true,
@@ -35,4 +47,3 @@ export async function GET() {
     return NextResponse.json({ status: 500, error: "Failed to fetch" }, { status: 500 });
   }
 }
-

@@ -63,9 +63,10 @@ export async function POST(
     }
   }
 
-  // Require rejection reason in body
-  const { rejection_reason } = await req.json();
-  if (!rejection_reason?.trim()) {
+  // Accept both the new and legacy payload keys from the UI.
+  const body = await req.json().catch(() => ({}));
+  const rejectionReason = body?.rejection_reason ?? body?.reason;
+  if (!rejectionReason?.trim()) {
     return NextResponse.json({ error: "rejection_reason is required" }, { status: 400 });
   }
 
@@ -76,7 +77,7 @@ export async function POST(
       approval_status: "rejected",
       rejected_by: currentUser.id,
       rejected_at: new Date(),
-      rejection_reason,
+      rejection_reason: rejectionReason.trim(),
     },
   });
 
@@ -88,7 +89,7 @@ export async function POST(
       action: "rejected",
       from_status: request.approval_status,
       to_status: "rejected",
-      remarks: rejection_reason,
+      remarks: rejectionReason.trim(),
     },
   });
 
