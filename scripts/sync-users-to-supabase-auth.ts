@@ -16,20 +16,26 @@ try {
   if (fs.existsSync(envPath)) {
     const contents = fs.readFileSync(envPath, "utf8");
     for (const line of contents.split(/\r?\n/)) {
-      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)?\s*$/);
-      if (!m) continue;
-      let [, key, val] = m;
+      const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)?\s*$/);
+      if (!match) continue;
+
+      let [, key, val] = match;
       if (!val) val = "";
-      // strip surrounding quotes
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+
+      if (
+        (val.startsWith('"') && val.endsWith('"')) ||
+        (val.startsWith("'") && val.endsWith("'"))
+      ) {
         val = val.slice(1, -1);
       }
+
       if (!process.env[key]) process.env[key] = val;
     }
   }
-} catch (e) {
-  // ignore
+} catch {
+  // Ignore env loading issues and fall back to existing process.env values.
 }
+
 import { PrismaClient } from "@prisma/client";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -37,7 +43,9 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Missing env vars. Ensure SUPABASE_SERVICE_ROLE_KEY is in .env");
-  console.log("Get it from: https://supabase.com/dashboard/project/avfkqynaftjpczomidxc/settings/api");
+  console.log(
+    "Get it from: https://supabase.com/dashboard/project/avfkqynaftjpczomidxc/settings/api"
+  );
   process.exit(1);
 }
 
@@ -55,40 +63,61 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 
 const prisma = new PrismaClient();
 
-async function findSupabaseUser(email: string) {
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 100,
-  });
+type AuthUser = {
+  id: string;
+  email: string | null;
+};
 
-  if (error) {
-    throw new Error(`Supabase listUsers failed: ${error.message}`);
+async function findSupabaseUser(email: string, authUsers: AuthUser[]) {
+  return authUsers.find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
+}
+
+async function listAllAuthUsers(): Promise<AuthUser[]> {
+  const users: AuthUser[] = [];
+  const perPage = 100;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      throw new Error(`Supabase listUsers failed: ${error.message}`);
+    }
+
+    const batch = (data?.users ?? []) as AuthUser[];
+    users.push(...batch);
+
+    if (batch.length < perPage) break;
+    page += 1;
   }
 
-  return (
-    data?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase()) || null
-  );
+  return users;
 }
 
 async function main() {
   console.log("=== Syncing Prisma users to Supabase Auth ===\n");
+
+  const authUsers = await listAllAuthUsers();
 
   // Sync regular users
   const users = await prisma.user.findMany();
   console.log(`Found ${users.length} users in Prisma`);
 
   for (const user of users) {
-    const existing = await findSupabaseUser(user.email);
+    const existing = await findSupabaseUser(user.email, authUsers);
 
     if (existing) {
-      console.log(`  ✓ ${user.email} exists in Supabase Auth (id: ${existing.id})`);
+      console.log(`  [ok] ${user.email} exists in Supabase Auth (id: ${existing.id})`);
       // Link supabase_id if not already set
       if (!user.supabase_id) {
         await prisma.user.update({
           where: { id: user.id },
           data: { supabase_id: existing.id },
         });
-        console.log(`    → Linked supabase_id to user #${user.id}`);
+        console.log(`    [link] Linked supabase_id to user #${user.id}`);
       }
     } else {
       const { data, error } = await supabase.auth.admin.createUser({
@@ -98,14 +127,14 @@ async function main() {
       });
 
       if (error) {
-        console.error(`  ✗ Failed to create ${user.email}: ${error.message}`);
+        console.error(`  [err] Failed to create ${user.email}: ${error.message}`);
       } else {
-        console.log(`  ✓ Created ${user.email} in Supabase Auth (id: ${data.user.id})`);
+        console.log(`  [create] Created ${user.email} in Supabase Auth (id: ${data.user.id})`);
         await prisma.user.update({
           where: { id: user.id },
           data: { supabase_id: data.user.id },
         });
-        console.log(`    → Linked supabase_id to user #${user.id}`);
+        console.log(`    [link] Linked supabase_id to user #${user.id}`);
       }
     }
   }
@@ -115,16 +144,16 @@ async function main() {
   console.log(`\nFound ${admins.length} admins in Prisma`);
 
   for (const admin of admins) {
-    const existing = await findSupabaseUser(admin.email);
+    const existing = await findSupabaseUser(admin.email, authUsers);
 
     if (existing) {
-      console.log(`  ✓ ${admin.email} exists in Supabase Auth (id: ${existing.id})`);
+      console.log(`  [ok] ${admin.email} exists in Supabase Auth (id: ${existing.id})`);
       if (!admin.supabase_id) {
         await prisma.admin.update({
           where: { id: admin.id },
           data: { supabase_id: existing.id },
         });
-        console.log(`    → Linked supabase_id to admin #${admin.id}`);
+        console.log(`    [link] Linked supabase_id to admin #${admin.id}`);
       }
     } else {
       const { data, error } = await supabase.auth.admin.createUser({
@@ -134,14 +163,14 @@ async function main() {
       });
 
       if (error) {
-        console.error(`  ✗ Failed to create ${admin.email}: ${error.message}`);
+        console.error(`  [err] Failed to create ${admin.email}: ${error.message}`);
       } else {
-        console.log(`  ✓ Created ${admin.email} in Supabase Auth (id: ${data.user.id})`);
+        console.log(`  [create] Created ${admin.email} in Supabase Auth (id: ${data.user.id})`);
         await prisma.admin.update({
           where: { id: admin.id },
           data: { supabase_id: data.user.id },
         });
-        console.log(`    → Linked supabase_id to admin #${admin.id}`);
+        console.log(`    [link] Linked supabase_id to admin #${admin.id}`);
       }
     }
   }
@@ -152,4 +181,7 @@ async function main() {
   await prisma.$disconnect();
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

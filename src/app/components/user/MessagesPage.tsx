@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "../../../lib/session";
+import { useNotifications } from "../notifications/notifications-context";
 
 import {
   Mail,
@@ -29,6 +30,7 @@ interface Message {
 }
 
 export function MessagesPage() {
+  const { markAllAsRead } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,6 +45,10 @@ export function MessagesPage() {
 
   useEffect(() => {
     if (userId == null) return;
+
+    // Auto-clear unread notifications when visiting the messages page.
+    markAllAsRead().catch(() => undefined);
+
     fetchMessages();
   }, [userId]);
 

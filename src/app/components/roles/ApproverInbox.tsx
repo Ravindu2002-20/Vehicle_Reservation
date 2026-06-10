@@ -310,7 +310,7 @@ export default function ApproverInbox({ role }: { role: "dean" | "admin-deputy" 
 
           <div className="space-y-6">
             {/* Request Summary */}
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+<div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Requester</p>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { NotificationsProvider } from "./components/notifications/notifications-context";
 
 export const metadata: Metadata = {
   title: "Vehicle Reservation System",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <NotificationsProvider>{children}</NotificationsProvider>
+      </body>
     </html>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "../../../lib/session";
+import { useNotifications } from "../notifications/notifications-context";
+
 
 import { Mail, User, Shield, Send, Plus } from "lucide-react";
 
@@ -23,7 +25,9 @@ interface Message {
 }
 
 export function AdminMessagesPage() {
+  const { markAllAsRead } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
 
@@ -35,8 +39,12 @@ export function AdminMessagesPage() {
   const adminId = user?.id ?? null;
 
   useEffect(() => {
+    // Auto-clear unread notifications when visiting the messages page.
+    markAllAsRead().catch(() => undefined);
+
     fetchMessages();
   }, []);
+
 
   async function fetchMessages() {
     setLoading(true);

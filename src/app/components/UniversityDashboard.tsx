@@ -19,7 +19,7 @@ import { AdminAccountDetailsPage } from "./roles/AdminAccountDetailsPage";
 import { ApprovedRequestsView } from "./roles/ApprovedRequestsView";
 import { DeanApprovedRequestsTable } from "./roles/DeanApprovedRequestsTable";
 import { AdminMessagesPage } from "./roles/AdminMessagesPage";
-
+import ReportsPage from "./roles/ReportsPage";
 
 export type UserRole =
   | "student"
@@ -46,7 +46,7 @@ export type StudentPage =
 // `SeniorOfficerPage` is handled exclusively for `role === "senior-officer"`.
 
 
-export type AdminPage = "dashboard" | "approvals" | "messages";
+export type AdminPage = "dashboard" | "approvals" | "messages" | "reports";
 
 export type SeniorOfficerPage =
   | "senior-dashboard"
@@ -133,9 +133,14 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
     }
 
     // Admin "messages" tab
-    if (currentPage === "messages") {
-      return <AdminMessagesPage />;
-    }
+        if (currentPage === "messages") {
+          return <AdminMessagesPage />;
+        }
+    
+        // Admin "reports" tab (only university-deputy + admin-deputy)
+        if (effectiveAdminPage === "reports" && (role === "university-deputy" || role === "admin-deputy")) {
+          return <ReportsPage />;
+        }
 
     // Admin "approvals" tab should show the approved requests table
     if (effectiveAdminPage === "approvals") {

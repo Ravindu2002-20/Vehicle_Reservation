@@ -1,14 +1,15 @@
 "use client";
 
-import { Bell, User, ChevronDown } from "lucide-react";
+import { User, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
 import type { UserRole } from "./UniversityDashboard";
-import type { StudentPage } from "./UniversityDashboard";
 import { useSession } from "@/lib/session";
+import { NotificationBell } from "./notifications/NotificationBell";
+import { useNotifications } from "./notifications/notifications-context";
+
 
 /** Human-readable labels for every UserRole value */
 const ROLE_LABELS: Record<UserRole, string> = {
@@ -29,33 +30,15 @@ interface UniversityHeaderProps {
 
 export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) {
   const router = useRouter();
-  const [notificationCount, setNotificationCount] = useState(0);
   const [userName, setUserName] = useState("User");
 
-
   const { user } = useSession();
+  const { unreadCount, unreadMessages, markAllAsRead } = useNotifications();
 
+  // keep existing userName behavior (this header currently uses a placeholder)
   useEffect(() => {
-    if (user?.email) {
-      // full name is not currently returned by /api/auth/me; keep default unless UI provides it elsewhere.
-      // (If you later extend /api/auth/me to include full_name, this will automatically work.)
-      fetchNotificationCount();
-    } else {
-      fetchNotificationCount();
-    }
+    void user?.email;
   }, [user?.email]);
-
-  async function fetchNotificationCount() {
-    try {
-      const res = await fetch("/api/stats?type=student");
-      const data = await res.json();
-      if (data.data?.unreadMessages !== undefined) {
-        setNotificationCount(data.data.unreadMessages);
-      }
-    } catch {
-      // ignore
-    }
-  }
 
   const getInitials = (name: string) =>
     name
@@ -91,14 +74,11 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
         {/* Right side - Notifications and Profile */}
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg hover:bg-orange-50 transition-all duration-300 hover:scale-105">
-            <Bell className="w-6 h-6 text-gray-600" />
-            {notificationCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-orange-500 text-white text-xs animate-pulse">
-                {notificationCount > 9 ? "9+" : notificationCount}
-              </Badge>
-            )}
-          </button>
+          <NotificationBell
+            unreadCount={unreadCount}
+            unreadMessages={unreadMessages}
+            onMarkAllAsRead={markAllAsRead}
+          />
 
           {/* Profile Dropdown */}
           <DropdownMenu>

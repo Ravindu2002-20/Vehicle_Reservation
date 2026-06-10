@@ -152,7 +152,7 @@ export default function RejectDialog({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-white rounded-lg p-4 border border-gray-200">
           <DialogHeader>
             <DialogTitle>Reject Request & Notify User</DialogTitle>
             <DialogDescription>
@@ -160,8 +160,8 @@ export default function RejectDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Requester</p>
@@ -174,7 +174,7 @@ export default function RejectDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label htmlFor={`reject-subject-${requestId}`} className="text-sm font-semibold">
                 Subject <span className="text-red-600">*</span>
               </Label>
@@ -185,7 +185,7 @@ export default function RejectDialog({
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label htmlFor={`reject-reason-${requestId}`} className="text-sm font-semibold">
                 Message / Rejection Reason <span className="text-red-600">*</span>
               </Label>
@@ -201,7 +201,7 @@ export default function RejectDialog({
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
               <Label htmlFor={`reject-attachment-${requestId}`} className="text-sm font-semibold">
                 Attach File (optional)
               </Label>

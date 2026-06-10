@@ -1,4 +1,4 @@
-import { FileText, MessageSquare, History, LayoutDashboard, FileCheck, Users, Car, Calendar, Activity } from "lucide-react";
+import { FileText, MessageSquare, History, LayoutDashboard, FileCheck, Users, Car, Calendar, Activity, BarChart2 } from "lucide-react";
 import type { AdminPage, StudentPage, UserRole } from "./UniversityDashboard";
 
 
@@ -42,8 +42,16 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "messages", label: "Messages", icon: MessageSquare },
   ];
 
-  // Admin menu items.
+  // Admin menu items (for university-deputy & admin-deputy)
   const adminMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
+    { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
+    { id: "approvals" as AdminPage, label: "Approvals", icon: FileCheck },
+    { id: "messages" as AdminPage, label: "Messages", icon: MessageSquare },
+    { id: "reports" as AdminPage, label: "Reports", icon: BarChart2 },
+  ];
+
+  // Dean menu items (no Reports section)
+  const deanMenuItems: Array<{ id: AdminPage; label: string; icon: any }> = [
     { id: "dashboard" as AdminPage, label: "Dashboard", icon: LayoutDashboard },
     { id: "approvals" as AdminPage, label: "Approvals", icon: FileCheck },
     { id: "messages" as AdminPage, label: "Messages", icon: MessageSquare },
@@ -54,7 +62,9 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
       ? studentMenuItems
       : role === "senior-officer"
         ? seniorOfficerMenuItems
-        : adminMenuItems;
+        : role === "dean"
+          ? deanMenuItems
+          : adminMenuItems;
 
 
 

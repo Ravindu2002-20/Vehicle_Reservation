@@ -5,6 +5,7 @@ import { Mail, Send, Shield, User, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import SeniorOfficerLayout from "./SeniorOfficerLayout";
+import { useNotifications } from "../../../components/notifications/notifications-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
@@ -22,6 +23,7 @@ interface Message {
 }
 
 export default function MessagesPage() {
+  const { markAllAsRead } = useNotifications();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
@@ -30,8 +32,12 @@ export default function MessagesPage() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    // Auto-clear unread notifications when visiting the messages page.
+    markAllAsRead().catch(() => undefined);
+
     fetchMessages();
   }, []);
+
 
   async function fetchMessages() {
     setLoading(true);
