@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 
-// GET /api/availability/drivers?type=available&tripType=short|long
+// GET /api/availability/drivers?tripType=short|long&travel_date_from=...&travel_date_to=...
 export async function GET(req: Request) {
   try {
     const currentUser = await getCurrentUser();
@@ -11,29 +11,28 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const tripType = searchParams.get("tripType") || "short";
+    const travelDateFrom = searchParams.get("travel_date_from");
+    const travelDateTo = searchParams.get("travel_date_to");
 
-    // Drivers are "available" when driver.availability_status matches and they are not already assigned
-    // to allocated requests.
-    // For long trips, frontend will enforce distinct drivers; backend validates only availability.
+    // Find drivers that do NOT have an overlapping allocated trip
+    // A driver is unavailable if there exists an allocated trip where:
+    //   existing.travel_date_from <= new.travel_date_to
+    //   AND existing.travel_date_to >= new.travel_date_from
+    const driversUnavailable = travelDateFrom && travelDateTo
+      ? await prisma.vehicleRequest.findMany({
+          where: {
+            allocation_status: "allocated",
+            travel_date_from: { lte: travelDateTo },
+            travel_date_to: { gte: travelDateFrom },
+          },
+          select: { driver_id: true },
+          distinct: ["driver_id"],
+        }).then((rows) => rows.map((r) => r.driver_id).filter((id): id is number => id !== null))
+      : [];
 
     const drivers = await prisma.driver.findMany({
       where: {
-        availability_status: { in: ["available", "Available"] },
-        id: {
-          notIn: [
-            ...(await prisma.vehicleRequest
-              .findMany({
-                where: {
-                  allocation_status: "allocated",
-                  approval_status: "approved_for_allocation",
-                  driver_id: { not: null },
-                },
-                select: { driver_id: true },
-              }))
-              .map((r) => r.driver_id)
-              .filter((v): v is number => typeof v === "number"),
-          ],
-        },
+        ...(driversUnavailable.length > 0 ? { id: { notIn: driversUnavailable } } : {}),
       },
       select: {
         id: true,
@@ -51,4 +50,3 @@ export async function GET(req: Request) {
     return NextResponse.json({ status: 500, error: "Failed to fetch" }, { status: 500 });
   }
 }
-

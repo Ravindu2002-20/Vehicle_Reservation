@@ -70,16 +70,18 @@ export async function GET(req: Request) {
       });
       const totalUsers = await prisma.user.count();
 
+      // Important: Admin dashboard cards read these exact keys.
       return NextResponse.json({
         data: {
-          pendingApprovals,
-          approvedToday,
-          approvedThisMonth,
-          rejectedCount,
-          totalUsers,
+          pendingApprovals: Number(pendingApprovals ?? 0),
+          approvedToday: Number(approvedToday ?? 0),
+          approvedThisMonth: Number(approvedThisMonth ?? 0),
+          rejectedCount: Number(rejectedCount ?? 0),
+          totalUsers: Number(totalUsers ?? 0),
         },
       });
     }
+
 
     const totalVehicles = await prisma.vehicle.count();
     const pendingRequests = await prisma.vehicleRequest.count({

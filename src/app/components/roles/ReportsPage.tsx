@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart2, FileText, Printer } from "lucide-react";
-
-// pdf deps (jspdf + jspdf-autotable) are imported lazily after installation
-// to avoid build/ts errors when deps are not yet present.
-
+import dynamic from "next/dynamic";
+import { BarChart2, FileText } from "lucide-react";
 
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import type { UserRole } from "../UniversityDashboard";
+
+// Dynamically import the PDF button with SSR disabled to avoid jspdf bundling issues
+const ExportPDFButton = dynamic(() => import("./ExportPDFButton"), { ssr: false });
 
 type FacultyOption = { id: number; name: string };
 type VehicleOption = { id: number; vehicle_number: string; vehicle_type: string };
@@ -70,21 +71,10 @@ const APPROVAL_STATUS_OPTIONS: Array<{ value: string; label: string }> = [
 const ALL_FILTER_VALUE = "__all__";
 
 function formatDateInputToISODate(dateInput: string) {
-  // dateInput is YYYY-MM-DD from <input type="date" />
   if (!dateInput) return undefined;
   const d = new Date(dateInput);
   if (Number.isNaN(d.getTime())) return undefined;
   return d.toISOString();
-}
-
-function formatDateTimeForReport(d: Date) {
-  return d.toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function formatDateValue(v: string) {
@@ -116,8 +106,6 @@ function isPendingStatus(approval_status: string) {
 }
 
 function isApprovedStatus(approval_status: string) {
-  // In this app, “approved” is generally represented by approved_for_allocation or allocated.
-  // For summary purposes we follow the requested dropdown semantics.
   return approval_status === "approved_for_allocation" || approval_status === "allocated";
 }
 
@@ -129,7 +117,11 @@ function isRejectedStatus(approval_status: string) {
   return approval_status === "rejected";
 }
 
-export default function ReportsPage() {
+interface ReportsPageProps {
+  role: UserRole;
+}
+
+export default function ReportsPage({ role }: ReportsPageProps) {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [faculties, setFaculties] = useState<FacultyOption[]>([]);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
@@ -150,6 +142,8 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<VehicleRequestRow[]>([]);
   const [total, setTotal] = useState(0);
+
+  const showPDFButton = role === "university-deputy" || role === "admin-deputy";
 
   useEffect(() => {
     let cancelled = false;
@@ -238,19 +232,11 @@ export default function ReportsPage() {
       if (filters.driverId) params.set("driverId", filters.driverId);
       if (filters.distanceType) params.set("distanceType", filters.distanceType);
 
-      // approval_status filter
-      // API expects exact approval_status string; the UI uses semantic buckets.
       if (filters.status) {
         if (filters.status === "pending") {
-          // Request pending states; backend currently only supports exact match.
-          // To keep behavior correct, we’ll skip API status filter for pending/all buckets
-          // and filter client-side after fetch.
-          // However requirement says API should accept `status`.
-          // We’ll map to a representative pending_ value is not safe.
-          // So: for these semantic buckets, we pass the selected value as-is only when exact.
-          // If user picks Pending we won’t set status filter.
+          // handled client-side
         } else if (filters.status === "approved") {
-          // no exact mapping; don’t set api status
+          // handled client-side
         } else if (filters.status === "rejected") {
           params.set("status", "rejected");
         } else if (filters.status === "approved_for_allocation") {
@@ -270,7 +256,6 @@ export default function ReportsPage() {
       const apiRows = (payload?.data ?? []) as VehicleRequestRow[];
       let filtered = apiRows;
 
-      // apply semantic buckets client-side when needed
       if (filters.status === "pending") filtered = apiRows.filter((r) => isPendingStatus(r.approval_status));
       if (filters.status === "approved") filtered = apiRows.filter((r) => isApprovedStatus(r.approval_status));
       if (filters.status === "rejected") filtered = apiRows.filter((r) => isRejectedStatus(r.approval_status));
@@ -314,22 +299,6 @@ export default function ReportsPage() {
     }
   }
 
-  function getFilterTextLines() {
-    const lines: string[] = [];
-    if (activeFilterSummary) lines.push(activeFilterSummary);
-    return lines;
-  }
-
-  async function exportToPDF() {
-    try {
-      window.print();
-    } catch (e) {
-      console.error("PDF generation failed", e);
-      alert("Failed to generate PDF. Please ensure jspdf dependencies are installed.");
-    }
-  }
-
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -341,17 +310,15 @@ export default function ReportsPage() {
           <p className="text-gray-600 mt-2">Search and export vehicle reservation requests</p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => void exportToPDF()}
-
-            disabled={rows.length === 0}
-            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-md hover:shadow-lg transition-all duration-200"
-          >
-            <Printer className="w-4 h-4 mr-2" />
-            Generate PDF Report
-          </Button>
-        </div>
+        {showPDFButton && (
+          <div className="flex items-center gap-2">
+            <ExportPDFButton
+              rows={rows}
+              activeFilterSummary={activeFilterSummary}
+              summary={summary}
+            />
+          </div>
+        )}
       </div>
 
       {/* SUMMARY CARDS */}
@@ -598,11 +565,9 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      {/* Initial load (only after filter options loaded) */}
       {!loadingOptions && rows.length === 0 && total === 0 && !loading && (
         <div className="hidden" />
       )}
     </div>
   );
 }
-

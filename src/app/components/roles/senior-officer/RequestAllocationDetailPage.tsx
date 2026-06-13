@@ -21,6 +21,8 @@ type RequestDetail = {
   request_letter_path?: string | null;
   places_to_visit?: string | null;
   travel_route?: string | null;
+  required_time_from?: string | null;
+  required_time_to?: string | null;
 };
 
 export default function RequestAllocationDetailPage({
@@ -52,21 +54,33 @@ export default function RequestAllocationDetailPage({
       setLoading(true);
       setError(null);
       try {
-        const [dRes, vRes, pRes, sRes] = await Promise.all([
-          fetch(`/api/vehicle-requests/senior-officer-detail?requestId=${encodeURIComponent(requestId)}`),
-          fetch("/api/vehicles/available"),
-          fetch("/api/availability/drivers?tripType=short"),
-          fetch("/api/availability/drivers?tripType=long"),
+        // Step 1: fetch detail first to get travel dates
+        const dRes = await fetch(`/api/vehicle-requests/senior-officer-detail?requestId=${encodeURIComponent(requestId)}`);
+        const dJson = dRes.ok ? await dRes.json() : null;
+        const detailData = dJson?.data ?? dJson ?? null;
+
+        if (!mounted) return;
+        setDetail(detailData);
+
+        // Step 2: use travel dates from detail to filter vehicle/driver availability
+        const dateFrom = detailData?.travel_date_from ?? "";
+        const dateTo = detailData?.travel_date_to ?? "";
+        const dateParams = dateFrom && dateTo
+          ? `&travel_date_from=${encodeURIComponent(dateFrom)}&travel_date_to=${encodeURIComponent(dateTo)}`
+          : "";
+
+        const [vRes, pRes, sRes] = await Promise.all([
+          fetch(`/api/vehicles/available${dateParams ? `?${dateParams.slice(1)}` : ""}`),
+          fetch(`/api/availability/drivers?tripType=short${dateParams}`),
+          fetch(`/api/availability/drivers?tripType=long${dateParams}`),
         ]);
 
-        const dJson = dRes.ok ? await dRes.json() : null;
         const vJson = vRes.ok ? await vRes.json() : null;
         const pJson = pRes.ok ? await pRes.json() : null;
         const sJson = sRes.ok ? await sRes.json() : null;
 
         if (!mounted) return;
 
-        setDetail(dJson?.data ?? dJson ?? null);
         setAvailableVehicles(Array.isArray(vJson?.data) ? vJson.data : Array.isArray(vJson) ? vJson : []);
 
         const driversPrimary = Array.isArray(pJson?.data?.drivers)
@@ -262,13 +276,24 @@ export default function RequestAllocationDetailPage({
               <div>
                 <div className="text-sm text-gray-500">Travel Dates</div>
                 <div className="font-medium text-gray-900">
-                  {detail?.travel_date_from ?? "-"} to {detail?.travel_date_to ?? "-"}
+                  {detail?.travel_date_from ? new Date(detail.travel_date_from).toLocaleDateString() : "-"}
+                  {" → "}
+                  {detail?.travel_date_to ? new Date(detail.travel_date_to).toLocaleDateString() : "-"}
                 </div>
               </div>
+
+              <div>
+                <div className="text-sm text-gray-500">Time Range</div>
+                <div className="font-medium text-gray-900">
+                  {detail?.required_time_from ?? "-"} {detail?.required_time_to ? `→ ${detail.required_time_to}` : ""}
+                </div>
+              </div>
+
               <div>
                 <div className="text-sm text-gray-500">Purpose</div>
                 <div className="font-medium text-gray-900">{detail?.purpose ?? "-"}</div>
               </div>
+
               <div>
                 <div className="text-sm text-gray-500">Travel Route</div>
                 <div className="font-medium text-gray-900">{detail?.travel_route ?? "-"}</div>

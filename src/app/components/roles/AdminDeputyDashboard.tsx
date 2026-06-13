@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Award, CheckCircle2, TrendingUp } from "lucide-react";
+import { Clock, Award, CheckCircle2, TrendingUp, Car } from "lucide-react";
 
 import { OngoingRequestsView } from "./OngoingRequestsView";
 import {
@@ -11,6 +11,8 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 
 type FacultyStat = {
   id?: number;
@@ -19,11 +21,36 @@ type FacultyStat = {
   vehiclesCount: number;
 };
 
+type AllocatedRequest = {
+  id: number;
+  requester: { id: number; full_name: string };
+  vehicle: { vehicle_number: string; vehicle_type: string } | null;
+  driver: { full_name: string } | null;
+  travel_date_from: string;
+  travel_date_to: string;
+  purpose: string;
+  distance_type: string;
+  places_to_visit?: string | null;
+};
+
+function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export function AdminDeputyDashboard({ currentPage }: { currentPage?: string }) {
   const [approvals, setApprovals] = useState<number>(0);
   const [approvedThisMonth, setApprovedThisMonth] = useState<number>(0);
   const [pendingRequests, setPendingRequests] = useState<number>(0);
   const [facultyStats, setFacultyStats] = useState<FacultyStat[]>([]);
+  const [allocatedRequests, setAllocatedRequests] = useState<AllocatedRequest[]>([]);
+  const [allocatedLoading, setAllocatedLoading] = useState(true);
 
   useEffect(() => {
     async function loadStats() {
@@ -50,8 +77,22 @@ export function AdminDeputyDashboard({ currentPage }: { currentPage?: string }) 
       }
     }
 
+    async function loadAllocated() {
+      setAllocatedLoading(true);
+      try {
+        const res = await fetch("/api/vehicle-requests?status=allocated");
+        const payload = await res.json();
+        setAllocatedRequests(payload?.data ?? []);
+      } catch {
+        setAllocatedRequests([]);
+      } finally {
+        setAllocatedLoading(false);
+      }
+    }
+
     loadStats();
     loadFacultyStats();
+    loadAllocated();
   }, []);
 
   return (
@@ -134,6 +175,59 @@ export function AdminDeputyDashboard({ currentPage }: { currentPage?: string }) 
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Allocated Trips Section */}
+      <Card className="shadow-lg border-0 rounded-xl hover:shadow-xl transition-shadow duration-300">
+        <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 border-b border-t-2 border-t-emerald-500 rounded-t-xl">
+          <CardTitle className="flex items-center gap-2 text-emerald-900">
+            <Car className="w-5 h-5" />
+            Allocated Trips
+          </CardTitle>
+          <CardDescription>Requests that have been allocated with vehicle and driver</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4">
+          {allocatedLoading ? (
+            <div className="text-center text-gray-500 py-4">Loading...</div>
+          ) : allocatedRequests.length === 0 ? (
+            <div className="text-center text-gray-500 py-4">No allocated trips yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Request ID</TableHead>
+                    <TableHead>Requester</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Driver</TableHead>
+                    <TableHead>Travel Date</TableHead>
+                    <TableHead>Purpose</TableHead>
+                    <TableHead>Trip Type</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allocatedRequests.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium text-emerald-700">REQ-{r.id}</TableCell>
+                      <TableCell>{r.requester?.full_name ?? "-"}</TableCell>
+                      <TableCell>{r.vehicle ? `${r.vehicle.vehicle_number} (${r.vehicle.vehicle_type})` : "-"}</TableCell>
+                      <TableCell>{r.driver?.full_name ?? "-"}</TableCell>
+                      <TableCell>
+                        {formatDate(r.travel_date_from)} → {formatDate(r.travel_date_to)}
+                      </TableCell>
+                      <TableCell>{r.purpose ?? "-"}</TableCell>
+                      <TableCell>
+                        <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {r.distance_type ?? "-"}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

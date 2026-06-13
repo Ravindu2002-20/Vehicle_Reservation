@@ -39,42 +39,55 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: "Request is not pending allocation" }, { status: 409 });
     }
 
-    // Validate vehicle availability
-    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
-    if (!vehicle || vehicle.availability_status.toLowerCase() !== "available") {
-      return NextResponse.json({ error: "Vehicle is not available" }, { status: 400 });
+    const travelFrom = request.travel_date_from;
+    const travelTo = request.travel_date_to;
+
+    if (!travelFrom || !travelTo) {
+      return NextResponse.json({ error: "Request travel dates are required" }, { status: 400 });
     }
 
+    // Overlap: existing.from <= new.to AND existing.to >= new.from
+    const overlapWhere = {
+      travel_date_from: { lte: travelTo },
+      travel_date_to:   { gte: travelFrom },
+    };
+
+    // Check vehicle exists
+    const vehicle = await prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    if (!vehicle) {
+      return NextResponse.json({ error: "Vehicle not found" }, { status: 404 });
+    }
+
+    // Check vehicle has no overlapping allocated trip
     const vehicleConflict = await prisma.vehicleRequest.findFirst({
       where: {
         allocation_status: "allocated",
         vehicle_id: vehicleId,
+        ...overlapWhere,
       },
       select: { id: true },
     });
     if (vehicleConflict) {
-      return NextResponse.json({ error: "Vehicle already allocated" }, { status: 409 });
+      return NextResponse.json({ error: "Vehicle already allocated for overlapping trip dates" }, { status: 409 });
     }
 
-    // Validate primary driver availability
+    // Check primary driver exists
     const primaryDriver = await prisma.driver.findUnique({ where: { id: primaryDriverId as number } });
-    if (
-      !primaryDriver ||
-      primaryDriver.availability_status.toLowerCase() !== "available"
-    ) {
-      return NextResponse.json({ error: "Primary driver is not available" }, { status: 400 });
+    if (!primaryDriver) {
+      return NextResponse.json({ error: "Primary driver not found" }, { status: 404 });
     }
 
-    // Conflict check: driver already allocated to another request
-    const conflict = await prisma.vehicleRequest.findFirst({
+    // Check primary driver has no overlapping allocated trip
+    const primaryDriverConflict = await prisma.vehicleRequest.findFirst({
       where: {
         allocation_status: "allocated",
         driver_id: primaryDriverId as number,
+        ...overlapWhere,
       },
       select: { id: true },
     });
-    if (conflict) {
-      return NextResponse.json({ error: "Primary driver already allocated" }, { status: 409 });
+    if (primaryDriverConflict) {
+      return NextResponse.json({ error: "Primary driver already allocated for overlapping trip dates" }, { status: 409 });
     }
 
     // Long trip: require secondary driver
@@ -85,42 +98,70 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (secondaryDriverId === primaryDriverId) {
         return NextResponse.json({ error: "Primary and secondary drivers must be different" }, { status: 400 });
       }
+
+      // Check secondary driver exists
       const secondaryDriver = await prisma.driver.findUnique({ where: { id: secondaryDriverId } });
-      if (
-        !secondaryDriver ||
-        secondaryDriver.availability_status.toLowerCase() !== "available"
-      ) {
-        return NextResponse.json({ error: "Secondary driver is not available" }, { status: 400 });
+      if (!secondaryDriver) {
+        return NextResponse.json({ error: "Secondary driver not found" }, { status: 404 });
       }
-      const conflict2 = await prisma.vehicleRequest.findFirst({
+
+      // Check secondary driver has no overlapping allocated trip
+      const secondaryDriverConflict = await prisma.vehicleRequest.findFirst({
         where: {
           allocation_status: "allocated",
           driver_id: secondaryDriverId,
+          ...overlapWhere,
         },
         select: { id: true },
       });
-      if (conflict2) return NextResponse.json({ error: "Secondary driver already allocated" }, { status: 409 });
+      if (secondaryDriverConflict) {
+        return NextResponse.json({ error: "Secondary driver already allocated for overlapping trip dates" }, { status: 409 });
+      }
     }
 
-    const updated = await prisma.vehicleRequest.update({
-      where: { id: requestId },
-      data: {
-        allocation_status: "allocated",
-        vehicle_id: vehicleId,
-        driver_id: primaryDriverId as number,
-      },
-    });
+    // All checks passed — commit atomically
+    const txOperations: Array<any> = [
+      prisma.vehicleRequest.update({
+        where: { id: requestId },
+        data: {
+          allocation_status: "allocated",
+          approval_status: "allocated",
+          vehicle_id: vehicleId,
+          driver_id: primaryDriverId as number,
+        },
+      }),
+      prisma.vehicle.update({
+        where: { id: vehicleId },
+        data: { availability_status: "allocated" },
+      }),
+      prisma.driver.update({
+        where: { id: primaryDriverId as number },
+        data: { availability_status: "allocated" },
+      }),
+      prisma.approvalHistory.create({
+        data: {
+          request_id: requestId,
+          admin_id: currentUser.id,
+          action: "allocated",
+          from_status: "approved_for_allocation",
+          to_status: "allocated",
+        },
+      }),
+    ];
 
-    await prisma.approvalHistory.create({
-      data: {
-        request_id: requestId,
-        admin_id: currentUser.id,
-        action: "allocated",
-        from_status: "approved_for_allocation",
-        to_status: "allocated",
-      },
-    });
+    // Long trip: mark secondary driver as allocated too
+    if (request.distance_type.toLowerCase() === "long") {
+      txOperations.splice(
+        3,
+        0,
+        prisma.driver.update({
+          where: { id: secondaryDriverId as number },
+          data: { availability_status: "allocated" },
+        })
+      );
+    }
 
+    const [updated] = await prisma.$transaction(txOperations);
     return NextResponse.json({ data: updated }, { status: 200 });
   } catch (err) {
     console.error("Allocate error:", err);

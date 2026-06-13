@@ -6,13 +6,16 @@ import { toast } from "sonner";
 
 import SeniorOfficerLayout from "./SeniorOfficerLayout";
 import { useNotifications } from "../../../components/notifications/notifications-context";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../ui/card";
+import { Card, CardContent } from "../../ui/card";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Input } from "../../ui/input";
 import { Textarea } from "../../ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../ui/tabs";
 
-interface Message {
+type TabType = "inbox" | "sent";
+
+interface InboxMessage {
   id: number;
   subject?: string;
   message: string;
@@ -22,27 +25,43 @@ interface Message {
   sender_admin?: { full_name: string };
 }
 
+interface SentMessage {
+  id: number;
+  subject?: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  receiver_user?: { full_name: string };
+  receiver_admin?: { full_name: string };
+}
+
 export default function MessagesPage() {
   const { markAllAsRead } = useNotifications();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<InboxMessage[] | SentMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompose, setShowCompose] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("inbox");
+
   const [recipientEmail, setRecipientEmail] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // Auto-clear unread notifications when visiting the messages page.
     markAllAsRead().catch(() => undefined);
-
-    fetchMessages();
+    fetchMessages("inbox");
   }, []);
 
+  useEffect(() => {
+    fetchMessages(activeTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
-  async function fetchMessages() {
+  async function fetchMessages(tab: TabType) {
     setLoading(true);
-    const res = await fetch("/api/messages/inbox");
+
+    const res = await fetch(`/api/messages/inbox?tab=${tab}`);
     const payload = await res.json().catch(() => null);
+
     setMessages(payload?.data ?? []);
     setLoading(false);
   }
@@ -71,11 +90,14 @@ export default function MessagesPage() {
     setMessage("");
     setRecipientEmail("");
     setShowCompose(false);
-    fetchMessages();
+    fetchMessages(activeTab);
   }
 
   return (
-    <SeniorOfficerLayout title="Messages" subtitle="Senior officer inbox and communication center">
+    <SeniorOfficerLayout
+      title="Messages"
+      subtitle="Senior officer inbox and communication center"
+    >
       <div className="flex justify-end">
         <Button
           onClick={() => setShowCompose(!showCompose)}
@@ -125,53 +147,118 @@ export default function MessagesPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
-        {loading && (
-          <Card>
-            <CardContent className="p-6 text-center">Loading messages...</CardContent>
-          </Card>
-        )}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+        <TabsList>
+          <TabsTrigger
+            value="inbox"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+          >
+            Inbox
+          </TabsTrigger>
+          <TabsTrigger
+            value="sent"
+            className="data-[state=active]:bg-orange-600 data-[state=active]:text-white"
+          >
+            Sent
+          </TabsTrigger>
+        </TabsList>
 
-        {!loading && messages.length === 0 && (
-          <Card>
-            <CardContent className="p-10 text-center">
-              <Mail className="mx-auto mb-3 w-10 h-10" />
-              No messages in inbox
-            </CardContent>
-          </Card>
-        )}
+        <TabsContent value="inbox" className="space-y-3">
+          {loading && (
+            <Card>
+              <CardContent className="p-6 text-center">Loading messages...</CardContent>
+            </Card>
+          )}
 
-        {messages.map((msg) => {
-          const sender = msg.sender_admin?.full_name || msg.sender_user?.full_name || "Unknown";
-
-          return (
-            <Card key={msg.id} className="hover:shadow-lg transition">
-              <CardContent className="p-4 space-y-2">
-                <div className="flex justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    {msg.sender_admin ? (
-                      <Shield className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <User className="w-4 h-4 text-gray-600" />
-                    )}
-                    <span className="font-medium">{sender}</span>
-                  </div>
-
-                  <Badge variant={msg.is_read ? "secondary" : "default"}>
-                    {msg.is_read ? "Read" : "New"}
-                  </Badge>
-                </div>
-
-                {msg.subject && <p className="font-semibold">{msg.subject}</p>}
-
-                <p className="text-gray-600 text-sm line-clamp-2">{msg.message}</p>
-
-                <p className="text-xs text-gray-400">{new Date(msg.created_at).toLocaleString()}</p>
+          {!loading && (messages as InboxMessage[]).length === 0 && (
+            <Card>
+              <CardContent className="p-10 text-center">
+                <Mail className="mx-auto mb-3 w-10 h-10" />
+                No messages in inbox
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          )}
+
+          {(messages as InboxMessage[]).map((msg) => {
+            const sender =
+              msg.sender_admin?.full_name || msg.sender_user?.full_name || "Unknown";
+
+            return (
+              <Card key={msg.id} className="hover:shadow-lg transition">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      {msg.sender_admin ? (
+                        <Shield className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <User className="w-4 h-4 text-gray-600" />
+                      )}
+                      <span className="font-medium">{sender}</span>
+                    </div>
+
+                    <Badge variant={msg.is_read ? "secondary" : "default"}>
+                      {msg.is_read ? "Read" : "New"}
+                    </Badge>
+                  </div>
+
+                  {msg.subject && <p className="font-semibold">{msg.subject}</p>}
+
+                  <p className="text-gray-600 text-sm line-clamp-2">{msg.message}</p>
+
+                  <p className="text-xs text-gray-400">
+                    {new Date(msg.created_at).toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>
+
+        <TabsContent value="sent" className="space-y-3">
+          {loading && (
+            <Card>
+              <CardContent className="p-6 text-center">Loading messages...</CardContent>
+            </Card>
+          )}
+
+          {!loading && (messages as SentMessage[]).length === 0 && (
+            <Card>
+              <CardContent className="p-10 text-center">
+                <Send className="mx-auto mb-3 w-10 h-10" />
+                No sent messages yet.
+              </CardContent>
+            </Card>
+          )}
+
+          {(messages as SentMessage[]).map((msg) => {
+            const recipient =
+              msg.receiver_admin?.full_name || msg.receiver_user?.full_name || "Unknown";
+
+            return (
+              <Card key={msg.id} className="hover:shadow-lg transition">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Send className="w-4 h-4 text-orange-600" />
+                      <span className="font-medium">To: {recipient}</span>
+                    </div>
+                    <Badge variant="secondary">Sent</Badge>
+                  </div>
+
+                  {msg.subject && <p className="font-semibold">{msg.subject}</p>}
+
+                  <p className="text-gray-600 text-sm line-clamp-2">{msg.message}</p>
+
+                  <p className="text-xs text-gray-400">
+                    {new Date(msg.created_at).toLocaleString()}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </TabsContent>
+      </Tabs>
     </SeniorOfficerLayout>
   );
 }
+

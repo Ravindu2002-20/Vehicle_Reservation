@@ -36,7 +36,7 @@ export function UniversitySidebar({ role, currentPage, onPageChange }: Universit
     { id: "senior-dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "vehicle-allocation", label: "Vehicle Allocation", icon: FileCheck },
     { id: "schedule", label: "Schedule", icon: Calendar },
-    { id: "vehicle-status", label: "Vehicle Status", icon: Activity },
+
     { id: "drivers", label: "Drivers", icon: Users },
     { id: "vehicles", label: "Vehicles", icon: Car },
     { id: "messages", label: "Messages", icon: MessageSquare },

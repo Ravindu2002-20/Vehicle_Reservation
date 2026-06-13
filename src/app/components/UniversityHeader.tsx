@@ -104,6 +104,7 @@ export function UniversityHeader({ role, onPageChange }: UniversityHeaderProps) 
               <DropdownMenuItem
                 onClick={() => onPageChange("account-details")}
                 className="cursor-pointer hover:bg-orange-50"
+                aria-label="Account Details"
               >
                 <User className="w-4 h-4 mr-2" />
                 Account Details

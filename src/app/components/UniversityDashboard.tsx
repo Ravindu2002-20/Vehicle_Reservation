@@ -10,12 +10,13 @@ import SeniorOfficerDashboardPage from "./roles/senior-officer/SeniorOfficerDash
 import VehicleAllocationPage from "./roles/senior-officer/VehicleAllocationPage";
 import RequestAllocationDetailPage from "./roles/senior-officer/RequestAllocationDetailPage";
 import SchedulePage from "./roles/senior-officer/SchedulePage";
-import VehicleStatusPage from "./roles/senior-officer/VehicleStatusPage";
 import DriversPage from "./roles/senior-officer/DriversPage";
 import VehiclesPage from "./roles/senior-officer/VehiclesPage";
 import MessagesPage from "./roles/senior-officer/MessagesPage";
 
 import { AdminAccountDetailsPage } from "./roles/AdminAccountDetailsPage";
+import SeniorOfficerAccountDetailsPage from "./roles/senior-officer/SeniorOfficerAccountDetailsPage";
+
 import { ApprovedRequestsView } from "./roles/ApprovedRequestsView";
 import { DeanApprovedRequestsTable } from "./roles/DeanApprovedRequestsTable";
 import { AdminMessagesPage } from "./roles/AdminMessagesPage";
@@ -42,23 +43,16 @@ export type StudentPage =
   | "settings"
   | "fleet-status";
 
-// Note: keep union types separate for typing convenience.
-// `SeniorOfficerPage` is handled exclusively for `role === "senior-officer"`.
-
-
 export type AdminPage = "dashboard" | "approvals" | "messages" | "reports";
 
 export type SeniorOfficerPage =
   | "senior-dashboard"
   | "vehicle-allocation"
   | "schedule"
-  | "vehicle-status"
   | "drivers"
   | "vehicles"
-  | "messages";
-
-
-
+  | "messages"
+  | "account-details"; // ← added so the type accepts it
 
 export function isAdminRole(role: UserRole): boolean {
   return (
@@ -72,7 +66,6 @@ export function isAdminRole(role: UserRole): boolean {
 interface UniversityDashboardProps {
   role: UserRole;
 }
-
 
 export function UniversityDashboard({ role }: UniversityDashboardProps) {
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
@@ -92,9 +85,14 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
   const effectiveSeniorOfficerPage: SeniorOfficerPage | null =
     role === "senior-officer" ? (currentPage as SeniorOfficerPage) : null;
 
-
   const renderAdminContent = () => {
-    // Senior Officer pages (fully isolated)
+    // ── Account details: handle for ALL roles first, before any role routing ──
+    if (currentPage === "account-details") {
+      if (role === "senior-officer") return <SeniorOfficerAccountDetailsPage />;
+      return <AdminAccountDetailsPage />;
+    }
+
+    // ── Senior Officer pages (fully isolated) ─────────────────────────────────
     if (role === "senior-officer" && effectiveSeniorOfficerPage) {
       if (effectiveSeniorOfficerPage === "senior-dashboard") {
         return selectedRequestId ? (
@@ -118,62 +116,48 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
           <VehicleAllocationPage onSelectRequest={setSelectedRequestId} />
         );
       }
-      if (effectiveSeniorOfficerPage === "schedule") return <SchedulePage />;
-      if (effectiveSeniorOfficerPage === "vehicle-status") return <VehicleStatusPage />;
-      if (effectiveSeniorOfficerPage === "drivers") return <DriversPage />;
-      if (effectiveSeniorOfficerPage === "vehicles") return <VehiclesPage />;
-      if (effectiveSeniorOfficerPage === "messages") return <MessagesPage />;
+      if (effectiveSeniorOfficerPage === "schedule")  return <SchedulePage />;
+      if (effectiveSeniorOfficerPage === "drivers")   return <DriversPage />;
+      if (effectiveSeniorOfficerPage === "vehicles")  return <VehiclesPage />;
+      if (effectiveSeniorOfficerPage === "messages")  return <MessagesPage />;
+
       return <SeniorOfficerDashboardPage onSelectRequest={setSelectedRequestId} />;
     }
 
-
-    // Admin "account-details" should show admin account details
-    if (currentPage === "account-details") {
-      return <AdminAccountDetailsPage />;
+    // ── Admin messages tab ────────────────────────────────────────────────────
+    if (currentPage === "messages") {
+      return <AdminMessagesPage />;
     }
 
-    // Admin "messages" tab
-        if (currentPage === "messages") {
-          return <AdminMessagesPage />;
-        }
-    
-        // Admin "reports" tab (only university-deputy + admin-deputy)
-        if (effectiveAdminPage === "reports" && (role === "university-deputy" || role === "admin-deputy")) {
-          return <ReportsPage />;
-        }
+    // ── Admin reports tab (university-deputy + admin-deputy only) ─────────────
+    if (
+      effectiveAdminPage === "reports" &&
+      (role === "university-deputy" || role === "admin-deputy")
+    ) {
+      return <ReportsPage role={role} />;
+    }
 
-    // Admin "approvals" tab should show the approved requests table
+    // ── Admin approvals tab ───────────────────────────────────────────────────
     if (effectiveAdminPage === "approvals") {
-      // Dean should see the table in the Dean style/spec
-      if (role === "dean") {
-        return <DeanApprovedRequestsTable />;
-      }
+      if (role === "dean") return <DeanApprovedRequestsTable />;
       return <ApprovedRequestsView />;
     }
 
-
-    // Default dashboard view for each admin role
+    // ── Default dashboard per admin role ──────────────────────────────────────
     if (role === "university-deputy") return <UniversityDeputyDashboard />;
-    if (role === "admin-deputy") return <AdminDeputyDashboard />;
-    if (role === "dean") return <DeanDashboard />;
+    if (role === "admin-deputy")      return <AdminDeputyDashboard />;
+    if (role === "dean")              return <DeanDashboard />;
 
     return null;
   };
 
-
-
-
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
       <UniversitySidebar role={role} currentPage={currentPage} onPageChange={setCurrentPage} />
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
         <UniversityHeader role={role} onPageChange={setCurrentPage} />
 
-        {/* Dashboard Content with Animation */}
         <main className="flex-1 overflow-y-auto p-6">
           <AnimatePresence mode="wait">
             <motion.div
@@ -188,7 +172,6 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
               ) : (
                 renderAdminContent()
               )}
-
             </motion.div>
           </AnimatePresence>
         </main>

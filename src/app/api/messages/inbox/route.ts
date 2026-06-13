@@ -11,21 +11,39 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const url = new URL(req.url);
+    const tab = url.searchParams.get("tab");
+    const isSent = tab === "sent";
+
     const messages = await prisma.message.findMany({
       where: {
-        ...(authUser.type === "user"
-          ? { receiver_user_id: authUser.id }
-          : { receiver_admin_id: authUser.id }),
+        ...(isSent
+          ? authUser.type === "user"
+            ? { sender_user_id: authUser.id }
+            : { sender_admin_id: authUser.id }
+          : authUser.type === "user"
+            ? { receiver_user_id: authUser.id }
+            : { receiver_admin_id: authUser.id }),
       },
 
-      include: {
-        sender_user: {
-          select: { id: true, full_name: true, email: true },
-        },
-        sender_admin: {
-          select: { id: true, full_name: true, email: true },
-        },
-      },
+      include: isSent
+        ? {
+            receiver_user: {
+              select: { id: true, full_name: true, email: true },
+            },
+            receiver_admin: {
+              select: { id: true, full_name: true, email: true },
+            },
+          }
+        : {
+            sender_user: {
+              select: { id: true, full_name: true, email: true },
+            },
+            sender_admin: {
+              select: { id: true, full_name: true, email: true },
+            },
+          },
+
       orderBy: { created_at: "desc" },
     });
 
@@ -38,4 +56,5 @@ export async function GET(req: Request) {
     );
   }
 }
+
 

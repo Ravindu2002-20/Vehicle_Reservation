@@ -226,7 +226,6 @@ export default function SeniorOfficerDashboardPage({
                 <TableRow>
                   <TableHead>Request ID</TableHead>
                   <TableHead>Requester</TableHead>
-                  <TableHead>Faculty</TableHead>
                   <TableHead>Destination</TableHead>
                   <TableHead>Trip Type</TableHead>
                   <TableHead>Travel Date</TableHead>
@@ -250,7 +249,6 @@ export default function SeniorOfficerDashboardPage({
                 ) : (
                   filtered.map((r) => {
                     const requester = r.requester?.full_name ?? r.requester_name ?? "";
-                    const facultyName = r.faculty?.name ?? "";
                     const tripType = r.distance_type ?? "";
                     const allocationStatus = r.allocation_status ?? "pending";
 
@@ -258,7 +256,6 @@ export default function SeniorOfficerDashboardPage({
                       <TableRow key={r.id}>
                         <TableCell className="font-medium text-orange-700">{r.id}</TableCell>
                         <TableCell>{requester || "-"}</TableCell>
-                        <TableCell>{facultyName || "-"}</TableCell>
                         <TableCell>{r.places_to_visit || "-"}</TableCell>
                         <TableCell>{tripType || "-"}</TableCell>
                         <TableCell>

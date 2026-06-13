@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -14,23 +14,30 @@ export async function GET() {
       return NextResponse.json({ status: 403, error: "Forbidden" }, { status: 403 });
     }
 
-    const allocatedVehicleIds = (
-      await prisma.vehicleRequest.findMany({
-        where: {
-          allocation_status: "allocated",
-          approval_status: "approved_for_allocation",
-          vehicle_id: { not: null },
-        },
-        select: { vehicle_id: true },
-      })
-    )
-      .map((request) => request.vehicle_id)
-      .filter((id): id is number => typeof id === "number");
+    const { searchParams } = new URL(req.url);
+    const travelDateFrom = searchParams.get("travel_date_from");
+    const travelDateTo = searchParams.get("travel_date_to");
+
+    // Find vehicles that do NOT have an overlapping allocated trip
+    // A vehicle is unavailable if there exists an allocated trip where:
+    //   existing.travel_date_from <= new.travel_date_to
+    //   AND existing.travel_date_to >= new.travel_date_from
+    const vehiclesUnavailable = travelDateFrom && travelDateTo
+      ? await prisma.vehicleRequest.findMany({
+          where: {
+            allocation_status: "allocated",
+            travel_date_from: { lte: travelDateTo },
+            travel_date_to: { gte: travelDateFrom },
+          },
+          select: { vehicle_id: true },
+          distinct: ["vehicle_id"],
+        }).then((rows) => rows.map((r) => r.vehicle_id).filter((id): id is number => id !== null))
+      : [];
 
     const vehicles = await prisma.vehicle.findMany({
       where: {
-        availability_status: { in: ["Available", "available"] },
-        id: { notIn: allocatedVehicleIds },
+        // availability_status is a secondary flag; primary check is date-based
+        ...(vehiclesUnavailable.length > 0 ? { id: { notIn: vehiclesUnavailable } } : {}),
       },
       select: {
         id: true,
