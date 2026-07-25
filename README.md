@@ -1,8 +1,4 @@
 
-  # Energy Management System Dashboard (Community)
-
-  This is a code bundle for Energy Management System Dashboard (Community). The original project is available at https://www.figma.com/design/prWS03Me5yvTGi4KxNl1ZN/Energy-Management-System-Dashboard--Community-.
-
   ## Running the code
 
 This repo includes a `pnpm-lock.yaml` and is built for a pnpm-based workflow. If you do not already have pnpm installed, install it globally first:
