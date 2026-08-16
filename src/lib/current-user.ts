@@ -7,7 +7,8 @@ export type UnifiedRoleType =
   | "university-deputy"
   | "admin-deputy"
   | "dean"
-  | "senior-officer";
+  | "senior-officer"
+  | "vice-chancellor";
 
 export type CurrentUser =
   | {
@@ -33,6 +34,7 @@ const VALID_ROLES: UnifiedRoleType[] = [
   "admin-deputy",
   "dean",
   "senior-officer",
+  "vice-chancellor",
 ];
 
 export async function getCurrentUser(): Promise<CurrentUser> {

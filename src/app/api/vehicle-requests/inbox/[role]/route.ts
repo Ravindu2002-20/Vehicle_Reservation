@@ -38,9 +38,15 @@ export async function GET(
       include: { requester: true },
       orderBy: { created_at: "desc" },
     });
-  } else if (role === "university-deputy") {
+} else if (role === "university-deputy") {
     requests = await prisma.vehicleRequest.findMany({
       where: { approval_status: "pending_university_deputy" },
+      include: { requester: true },
+      orderBy: { created_at: "desc" },
+    });
+  } else if (role === "vice-chancellor") {
+    requests = await prisma.vehicleRequest.findMany({
+      where: { approval_status: "pending_vice_chancellor" },
       include: { requester: true },
       orderBy: { created_at: "desc" },
     });

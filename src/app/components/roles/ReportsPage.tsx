@@ -143,7 +143,7 @@ export default function ReportsPage({ role }: ReportsPageProps) {
   const [rows, setRows] = useState<VehicleRequestRow[]>([]);
   const [total, setTotal] = useState(0);
 
-  const showPDFButton = role === "university-deputy" || role === "admin-deputy";
+const showPDFButton = role === "university-deputy" || role === "admin-deputy" || role === "vice-chancellor";
 
   useEffect(() => {
     let cancelled = false;

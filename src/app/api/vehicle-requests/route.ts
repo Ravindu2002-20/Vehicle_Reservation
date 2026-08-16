@@ -110,10 +110,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const statusParam = searchParams.get("status");
 
-  const statusByRole: Record<string, string> = {
+const statusByRole: Record<string, string> = {
     dean: "pending_dean",
     "admin-deputy": "pending_admin_deputy",
     "university-deputy": "pending_university_deputy",
+    "vice-chancellor": "pending_vice_chancellor",
     "senior-officer": "approved_for_allocation",
   };
 

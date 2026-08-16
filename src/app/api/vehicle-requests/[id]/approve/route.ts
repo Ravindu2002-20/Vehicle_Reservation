@@ -86,8 +86,31 @@ export async function POST(
     return NextResponse.json({ success: true }, { status: 200 });
   }
 
-  if (currentUser.role === "university-deputy") {
+if (currentUser.role === "university-deputy") {
     if (request.approval_status !== "pending_university_deputy") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await prisma.vehicleRequest.update({
+      where: { id },
+      data: { approval_status: "pending_vice_chancellor", approved_by: currentUser.id },
+    });
+
+    await prisma.approvalHistory.create({
+      data: {
+        request_id: id,
+        admin_id: currentUser.id,
+        action: "approved",
+        from_status: "pending_university_deputy",
+        to_status: "pending_vice_chancellor",
+      },
+    });
+
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+
+  if (currentUser.role === "vice-chancellor") {
+    if (request.approval_status !== "pending_vice_chancellor") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -101,7 +124,7 @@ export async function POST(
         request_id: id,
         admin_id: currentUser.id,
         action: "approved",
-        from_status: "pending_university_deputy",
+        from_status: "pending_vice_chancellor",
         to_status: "approved_for_allocation",
       },
     });

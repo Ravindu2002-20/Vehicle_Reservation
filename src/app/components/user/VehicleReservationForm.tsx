@@ -333,7 +333,7 @@ export function VehicleReservationForm() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="DEAN">Dean</SelectItem>
-                      <SelectItem value="UDR">University Deputy Registrar</SelectItem>
+                      <SelectItem value="UDR">University Registrar</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

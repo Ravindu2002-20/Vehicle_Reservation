@@ -41,9 +41,10 @@ const STAGE_TO_INBOX_ROLE: Record<OngoingRequestsStage, string> = {
   dean: "dean",
   "admin-deputy": "admin-deputy",
   "university-deputy": "university-deputy",
+  "vice-chancellor": "vice-chancellor",
 };
 
-export type OngoingRequestsStage = "dean" | "admin-deputy" | "university-deputy";
+export type OngoingRequestsStage = "dean" | "admin-deputy" | "university-deputy" | "vice-chancellor";
 
 export function OngoingRequestsView({ stage }: { stage: OngoingRequestsStage }) {
   const [ongoingRequests, setOngoingRequests] = useState<OngoingRequest[]>([]);

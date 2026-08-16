@@ -39,7 +39,7 @@ function formatDate(dateStr?: string | null) {
   });
 }
 
-export function UniversityDeputyDashboard({ currentPage }: { currentPage?: string }) {
+export function ViceChancellorDashboard({ currentPage }: { currentPage?: string }) {
   const [approvals, setApprovals] = useState<number>(0);
   const [approvedThisMonth, setApprovedThisMonth] = useState<number>(0);
   const [pendingRequests, setPendingRequests] = useState<number>(0);
@@ -93,7 +93,7 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-800">University Registrar Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Vice Chancellor Dashboard</h1>
         <p className="text-gray-600 mt-2">University-wide vehicle management and oversight</p>
       </div>
 
@@ -227,7 +227,7 @@ export function UniversityDeputyDashboard({ currentPage }: { currentPage?: strin
       </Card>
 
       <div className="pt-4">
-        <OngoingRequestsView stage="university-deputy" />
+        <OngoingRequestsView stage="vice-chancellor" />
       </div>
     </div>
   );

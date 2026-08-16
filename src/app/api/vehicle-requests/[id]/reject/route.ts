@@ -9,10 +9,11 @@ export async function POST(
   const currentUser = await getCurrentUser();
   if (!currentUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const allowedRoles: Record<string, string> = {
+const allowedRoles: Record<string, string> = {
     dean: "pending_dean",
     "admin-deputy": "pending_admin_deputy",
     "university-deputy": "pending_university_deputy",
+    "vice-chancellor": "pending_vice_chancellor",
   };
 
   const expectedStatus = allowedRoles[currentUser.role];

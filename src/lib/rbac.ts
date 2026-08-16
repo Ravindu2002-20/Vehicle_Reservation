@@ -3,12 +3,14 @@ const APPROVE_PERMISSIONS: Record<string, string> = {
   pending_dean:                "dean",
   pending_admin_deputy:        "admin-deputy",
   pending_university_deputy:   "university-deputy",
+  pending_vice_chancellor:     "vice-chancellor",
 };
 
 const REJECT_PERMISSIONS: Record<string, string> = {
   pending_dean:                "dean",
   pending_admin_deputy:        "admin-deputy",
   pending_university_deputy:   "university-deputy",
+  pending_vice_chancellor:     "vice-chancellor",
 };
 
 /**

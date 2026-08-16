@@ -39,36 +39,73 @@ export async function GET(req: Request) {
     }
 
     if (type === "admin") {
-      const pendingApprovals = await prisma.vehicleRequest.count({
-        where: {
-          approval_status: {
-            in: ["pending_dean", "pending_admin_deputy", "pending_university_deputy"],
-          },
-        },
-      });
-
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 
-      const approvedToday = await prisma.vehicleRequest.count({
-        where: {
-          approval_status: { in: ["approved_for_allocation", "allocated"] },
-          created_at: { gte: startOfToday },
-        },
-      });
+      // ── Role-specific pending count ──────────────────────────────────────
+      let pendingApprovals = 0;
+      const role = authUser.role;
 
-      const approvedThisMonth = await prisma.vehicleRequest.count({
-        where: {
-          approval_status: { in: ["approved_for_allocation", "allocated"] },
-          created_at: { gte: startOfMonth },
-        },
-      });
+      if (role === "dean") {
+        // Dean only sees requests from their own faculty
+        const dean = await prisma.admin.findUnique({
+          where: { id: authUser.id },
+          select: { faculty_id: true },
+        });
+        if (dean?.faculty_id != null) {
+          pendingApprovals = await prisma.vehicleRequest.count({
+            where: {
+              approval_status: "pending_dean",
+              requester: {
+                department: { faculty_id: dean.faculty_id },
+              },
+            },
+          });
+        }
+      } else if (role === "admin-deputy") {
+        pendingApprovals = await prisma.vehicleRequest.count({
+          where: { approval_status: "pending_admin_deputy" },
+        });
+} else if (role === "university-deputy") {
+        pendingApprovals = await prisma.vehicleRequest.count({
+          where: { approval_status: "pending_university_deputy" },
+        });
+      } else if (role === "vice-chancellor") {
+        pendingApprovals = await prisma.vehicleRequest.count({
+          where: { approval_status: "pending_vice_chancellor" },
+        });
+      } else {
+        // Fallback: count all pending across all stages
+        pendingApprovals = await prisma.vehicleRequest.count({
+          where: {
+            approval_status: {
+              in: ["pending_dean", "pending_admin_deputy", "pending_university_deputy", "pending_vice_chancellor"],
+            },
+          },
+        });
+      }
 
-      const rejectedCount = await prisma.vehicleRequest.count({
-        where: { approval_status: "rejected" },
-      });
-      const totalUsers = await prisma.user.count();
+      // ── Accurate approval counts from approval_history ───────────────────
+      const [approvedToday, approvedThisMonth, rejectedCount, totalUsers] =
+        await Promise.all([
+          prisma.approvalHistory.count({
+            where: {
+              action: "approved",
+              created_at: { gte: startOfToday },
+            },
+          }),
+          prisma.approvalHistory.count({
+            where: {
+              action: "approved",
+              created_at: { gte: startOfMonth },
+            },
+          }),
+          prisma.vehicleRequest.count({
+            where: { approval_status: "rejected" },
+          }),
+          prisma.user.count(),
+        ]);
 
       // Important: Admin dashboard cards read these exact keys.
       return NextResponse.json({
@@ -83,11 +120,11 @@ export async function GET(req: Request) {
     }
 
 
-    const totalVehicles = await prisma.vehicle.count();
+const totalVehicles = await prisma.vehicle.count();
     const pendingRequests = await prisma.vehicleRequest.count({
       where: {
         approval_status: {
-          in: ["pending_dean", "pending_admin_deputy", "pending_university_deputy"],
+          in: ["pending_dean", "pending_admin_deputy", "pending_university_deputy", "pending_vice_chancellor"],
         },
       },
     });

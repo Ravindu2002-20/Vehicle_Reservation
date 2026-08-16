@@ -7,7 +7,8 @@ export type UserRole =
   | "university-deputy"
   | "admin-deputy"
   | "dean"
-  | "senior-officer";
+  | "senior-officer"
+  | "vice-chancellor";
 
 const VALID_ROLES: UserRole[] = [
   "student",
@@ -16,6 +17,7 @@ const VALID_ROLES: UserRole[] = [
   "admin-deputy",
   "dean",
   "senior-officer",
+  "vice-chancellor",
 ];
 
 interface RoleRouterProps {

@@ -6,10 +6,11 @@ import type { AdminPage, StudentPage, UserRole } from "./UniversityDashboard";
 const ROLE_LABELS: Record<UserRole, string> = {
   "student": "Student",
   "lecturer": "Lecturer",
-  "university-deputy": "University Deputy",
+  "university-deputy": "University Registrar",
   "admin-deputy": "Admin Deputy",
   "dean": "Dean",
   "senior-officer": "Senior Officer",
+  "vice-chancellor": "Vice Chancellor",
 };
 
 type UniversitySidebarPage = StudentPage | AdminPage;

@@ -130,9 +130,10 @@ export default function SeniorOfficerAccountDetailsPage() {
       student: { label: "Student", color: "bg-blue-100 text-blue-700" },
       lecturer: { label: "Lecturer", color: "bg-purple-100 text-purple-700" },
       "admin-deputy": { label: "Admin Deputy", color: "bg-orange-100 text-orange-700" },
-      "university-deputy": { label: "University Deputy", color: "bg-green-100 text-green-700" },
+"university-deputy": { label: "University Registrar", color: "bg-green-100 text-green-700" },
       dean: { label: "Dean", color: "bg-indigo-100 text-indigo-700" },
       "senior-officer": { label: "Senior Officer", color: "bg-red-100 text-red-700" },
+      "vice-chancellor": { label: "Vice Chancellor", color: "bg-teal-100 text-teal-700" },
     };
     const entry = map[role] ?? { label: role, color: "bg-gray-100 text-gray-600" };
     return (

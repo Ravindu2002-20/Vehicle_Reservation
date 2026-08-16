@@ -79,7 +79,7 @@ export default function SubmitRequestPage() {
             className="w-full"
           >
             <option value="DEAN">Dean</option>
-            <option value="UDR">University Deputy Registrar</option>
+            <option value="UDR">University Registrar</option>
           </select>
         </div>
         {error && <div className="text-red-600">{error}</div>}

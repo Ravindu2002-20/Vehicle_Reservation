@@ -10,6 +10,7 @@ export type ApprovalStatus =
   | "pending_dean"
   | "pending_admin_deputy"
   | "pending_university_deputy"
+  | "pending_vice_chancellor"
   | "approved_for_allocation"
   | "allocated"
   | "rejected";
@@ -83,6 +84,7 @@ export async function getInboxForRole(role: string) {
     "dean":                "pending_dean",
     "admin-deputy":        "pending_admin_deputy",
     "university-deputy":   "pending_university_deputy",
+    "vice-chancellor":     "pending_vice_chancellor",
     "senior-officer":      "approved_for_allocation",
   };
 
@@ -113,7 +115,10 @@ const APPROVE_TRANSITIONS: Record<string, Partial<Record<string, ApprovalStatus>
     "admin-deputy": "pending_university_deputy",
   },
   pending_university_deputy: {
-    "university-deputy": "approved_for_allocation",
+    "university-deputy": "pending_vice_chancellor",
+  },
+  pending_vice_chancellor: {
+    "vice-chancellor": "approved_for_allocation",
   },
 };
 
@@ -159,12 +164,14 @@ const REJECTABLE_STATUSES: ApprovalStatus[] = [
   "pending_dean",
   "pending_admin_deputy",
   "pending_university_deputy",
+  "pending_vice_chancellor",
 ];
 
 const REJECT_PERMISSIONS: Record<string, ApprovalStatus> = {
   "dean":                "pending_dean",
   "admin-deputy":        "pending_admin_deputy",
   "university-deputy":   "pending_university_deputy",
+  "vice-chancellor":     "pending_vice_chancellor",
 };
 
 export async function rejectRequest(

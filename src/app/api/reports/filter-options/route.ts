@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const allowed = ["university-deputy", "admin-deputy"] as const;
+    const allowed = ["university-deputy", "admin-deputy", "vice-chancellor"] as const;
     if (!allowed.includes(currentUser.role as any)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

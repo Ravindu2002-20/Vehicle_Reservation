@@ -4,6 +4,7 @@ import { UniversitySidebar } from "./UniversitySidebar";
 import { UniversityHeader } from "./UniversityHeader";
 import { StudentDashboard } from "./user/StudentDashboard";
 import { UniversityDeputyDashboard } from "./roles/UniversityDeputyDashboard";
+import { ViceChancellorDashboard } from "./roles/ViceChancellorDashboard";
 import { AdminDeputyDashboard } from "./roles/AdminDeputyDashboard";
 import { DeanDashboard } from "./roles/DeanDashboard";
 import SeniorOfficerDashboardPage from "./roles/senior-officer/SeniorOfficerDashboardPage";
@@ -28,7 +29,8 @@ export type UserRole =
   | "university-deputy"
   | "admin-deputy"
   | "dean"
-  | "senior-officer";
+  | "senior-officer"
+  | "vice-chancellor";
 
 export type StudentPage =
   | "reservation-form"
@@ -59,7 +61,8 @@ export function isAdminRole(role: UserRole): boolean {
     role === "university-deputy" ||
     role === "admin-deputy" ||
     role === "dean" ||
-    role === "senior-officer"
+    role === "senior-officer" ||
+    role === "vice-chancellor"
   );
 }
 
@@ -132,7 +135,7 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
     // ── Admin reports tab (university-deputy + admin-deputy only) ─────────────
     if (
       effectiveAdminPage === "reports" &&
-      (role === "university-deputy" || role === "admin-deputy")
+      (role === "university-deputy" || role === "admin-deputy" || role === "vice-chancellor")
     ) {
       return <ReportsPage role={role} />;
     }
@@ -144,9 +147,10 @@ export function UniversityDashboard({ role }: UniversityDashboardProps) {
     }
 
     // ── Default dashboard per admin role ──────────────────────────────────────
-    if (role === "university-deputy") return <UniversityDeputyDashboard />;
-    if (role === "admin-deputy")      return <AdminDeputyDashboard />;
-    if (role === "dean")              return <DeanDashboard />;
+    if (role === "university-deputy")  return <UniversityDeputyDashboard />;
+    if (role === "vice-chancellor")    return <ViceChancellorDashboard />;
+    if (role === "admin-deputy")       return <AdminDeputyDashboard />;
+    if (role === "dean")               return <DeanDashboard />;
 
     return null;
   };

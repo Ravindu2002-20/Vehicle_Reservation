@@ -15,10 +15,11 @@ import { useNotifications } from "./notifications/notifications-context";
 const ROLE_LABELS: Record<UserRole, string> = {
   "student": "Student",
   "lecturer": "Lecturer",
-  "university-deputy": "University Deputy",
+  "university-deputy": "University Registrar",
   "admin-deputy": "Admin Deputy",
   "dean": "Dean",
   "senior-officer": "Senior Officer",
+  "vice-chancellor": "Vice Chancellor",
 };
 
 interface UniversityHeaderProps {

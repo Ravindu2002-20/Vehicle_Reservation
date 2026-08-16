@@ -111,7 +111,7 @@ export function DeanApprovedRequestsTable() {
       try {
         setLoading(true);
         const res = await fetch(
-          "/api/vehicle-requests?status=pending_admin_deputy,pending_university_deputy,approved_for_allocation,allocated,rejected"
+"/api/vehicle-requests?status=pending_admin_deputy,pending_university_deputy,pending_vice_chancellor,approved_for_allocation,allocated,rejected"
         );
         const payload = await res.json();
         if (cancelled) return;

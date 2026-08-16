@@ -138,9 +138,10 @@ export function AdminAccountDetailsPage() {
   const roleBadge = (role: string) => {
     const map: Record<string, { label: string; color: string }> = {
       "admin-deputy":      { label: "Admin Deputy",      color: "bg-orange-100 text-orange-700" },
-      "university-deputy": { label: "University Deputy", color: "bg-green-100 text-green-700"  },
+"university-deputy": { label: "University Registrar", color: "bg-green-100 text-green-700"  },
       dean:                { label: "Dean",              color: "bg-indigo-100 text-indigo-700" },
       "senior-officer":    { label: "Senior Officer",    color: "bg-red-100 text-red-700"      },
+      "vice-chancellor":   { label: "Vice Chancellor",   color: "bg-teal-100 text-teal-700"    },
     };
     const entry = map[role] ?? { label: role, color: "bg-gray-100 text-gray-600" };
     return (
@@ -148,6 +149,16 @@ export function AdminAccountDetailsPage() {
         {entry.label}
       </span>
     );
+  };
+
+  const adminRoleLabel = (adminRole: string) => {
+    const labels: Record<string, string> = {
+      "university-deputy": "University Registrar",
+      "admin-deputy": "Admin Deputy",
+      dean: "Dean",
+      "senior-officer": "Senior Officer",
+    };
+    return labels[adminRole] ?? adminRole;
   };
 
   const Field = ({
@@ -229,7 +240,7 @@ export function AdminAccountDetailsPage() {
           <Field label="Email"      value={profile.email}      editable editValue={editEmail}     onEdit={setEditEmail}     type="email" />
           <Field label="Telephone"  value={profile.telephone}  editable editValue={editTelephone} onEdit={setEditTelephone} type="tel" />
           {profile.admin_role && (
-            <Field label="Admin Role" value={profile.admin_role} />
+            <Field label="Admin Role" value={adminRoleLabel(profile.admin_role)} />
           )}
         </div>
 
