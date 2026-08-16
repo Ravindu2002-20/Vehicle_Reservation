@@ -6,6 +6,7 @@
     "setup": "npx pnpm install",
     "dev": "next dev --turbo",
     "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "sync:supabase-auth": "npx tsx scripts/sync-users-to-supabase-auth.ts",
     "ensure-test-users": "npx tsx scripts/ensure-test-users.ts"

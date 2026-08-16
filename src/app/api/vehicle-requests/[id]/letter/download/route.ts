@@ -42,7 +42,12 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
     }
 
-    const filePath = path.join(process.cwd(), request.request_letter_path);
+    let filePath: string;
+    if (path.isAbsolute(request.request_letter_path)) {
+      filePath = request.request_letter_path;
+    } else {
+      filePath = path.join(process.cwd(), request.request_letter_path);
+    }
 
     if (!fs.existsSync(filePath)) {
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });

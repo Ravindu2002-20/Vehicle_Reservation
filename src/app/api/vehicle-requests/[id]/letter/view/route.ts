@@ -41,8 +41,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
     }
 
-    // Local storage path on the server: /uploads/request-letters/...
-    const filePath = path.join(process.cwd(), request.request_letter_path);
+    // Determine file path. Support absolute temp paths (server-side) and relative
+    // paths previously stored under /uploads/request-letters.
+    let filePath: string;
+    if (path.isAbsolute(request.request_letter_path)) {
+      filePath = request.request_letter_path;
+    } else {
+      filePath = path.join(process.cwd(), request.request_letter_path);
+    }
 
     if (!fs.existsSync(filePath)) {
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
