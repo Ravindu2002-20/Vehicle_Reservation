@@ -2,6 +2,28 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { prisma } from "@/lib/prisma";
 import { createVehicleRequest } from "@/lib/approvalService";
+import {
+  createSupabaseServiceClient,
+  getStorageObjectPath,
+  REQUEST_LETTER_BUCKET,
+} from "@/lib/supabase/server";
+
+async function uploadRequestLetter(file: File, userId: number) {
+  const supabase = createSupabaseServiceClient();
+  const objectPath = getStorageObjectPath(userId, file.name);
+
+  const { error } = await supabase.storage.from(REQUEST_LETTER_BUCKET).upload(objectPath, await file.arrayBuffer(), {
+    contentType: file.type || "application/octet-stream",
+    upsert: false,
+    cacheControl: "3600",
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return objectPath;
+}
 
 export async function POST(req: Request) {
   try {
@@ -26,19 +48,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ error: "Only application/pdf is allowed" }, { status: 400 });
         }
 
-        // Write to system temp dir instead of project files (serverless-safe)
-        const os = await import("node:os");
-        const fs = await import("node:fs");
-        const path = await import("node:path");
-        const uploadDir = path.join(os.tmpdir(), "vehicle-request-letters");
-        fs.mkdirSync(uploadDir, { recursive: true });
-
-        const requestLetterBytes = Buffer.from(await file.arrayBuffer());
-        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
-        const filePath = path.join(uploadDir, fileName);
-        fs.writeFileSync(filePath, requestLetterBytes);
-        // Note: temp path will not be publicly available. Consider using Supabase Storage for production.
-        request_letter_path = filePath;
+        request_letter_path = await uploadRequestLetter(file, currentUser.id);
       }
 
       requestData = Object.fromEntries(formData) as any;

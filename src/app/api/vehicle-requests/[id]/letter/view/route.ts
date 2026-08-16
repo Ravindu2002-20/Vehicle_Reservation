@@ -1,8 +1,36 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/current-user";
+import { createSupabaseServiceClient, REQUEST_LETTER_BUCKET } from "@/lib/supabase/server";
 import fs from "fs";
 import path from "path";
+
+async function getLetterBufferOrUrl(requestLetterPath: string) {
+  if (!requestLetterPath) return null;
+
+  if (requestLetterPath.includes("/") && !requestLetterPath.startsWith("/") && !path.isAbsolute(requestLetterPath)) {
+    const supabase = createSupabaseServiceClient();
+    const { data, error } = await supabase.storage
+      .from(REQUEST_LETTER_BUCKET)
+      .createSignedUrl(requestLetterPath, 60 * 5, { download: false });
+
+    if (!error && data?.signedUrl) {
+      return { signedUrl: data.signedUrl };
+    }
+  }
+
+  if (path.isAbsolute(requestLetterPath)) {
+    const filePath = requestLetterPath;
+    if (!fs.existsSync(filePath)) return null;
+    const stream = fs.createReadStream(filePath);
+    return { stream };
+  }
+
+  const filePath = path.join(process.cwd(), requestLetterPath);
+  if (!fs.existsSync(filePath)) return null;
+  const stream = fs.createReadStream(filePath);
+  return { stream };
+}
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
@@ -41,22 +69,26 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
     }
 
-    // Determine file path. Support absolute temp paths (server-side) and relative
-    // paths previously stored under /uploads/request-letters.
-    let filePath: string;
-    if (path.isAbsolute(request.request_letter_path)) {
-      filePath = request.request_letter_path;
-    } else {
-      filePath = path.join(process.cwd(), request.request_letter_path);
-    }
-
-    if (!fs.existsSync(filePath)) {
+    const document = await getLetterBufferOrUrl(request.request_letter_path);
+    if (!document) {
       return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
     }
 
-    const stream = fs.createReadStream(filePath);
+    if ("signedUrl" in document && document.signedUrl) {
+      const response = await fetch(document.signedUrl);
+      if (!response.ok) {
+        return NextResponse.json({ status: 404, error: "PDF not found" }, { status: 404 });
+      }
 
-    return new NextResponse(stream as any, {
+      return new NextResponse(await response.arrayBuffer(), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+        },
+      });
+    }
+
+    return new NextResponse(document.stream as any, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

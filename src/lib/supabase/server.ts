@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
@@ -39,6 +40,33 @@ export function createSupabaseServerClient() {
     }
   );
 }
+
+export function createSupabaseServiceClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL is missing");
+  }
+
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing");
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+export function getStorageObjectPath(userId: number, fileName: string) {
+  const sanitized = fileName.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+  return `${userId}/request_letters/${Date.now()}_${sanitized}`;
+}
+
+export const REQUEST_LETTER_BUCKET = "vehicle-request-letters";
 
 
 
